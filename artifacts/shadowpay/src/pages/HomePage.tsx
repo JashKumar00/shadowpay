@@ -105,9 +105,9 @@ export default function HomePage() {
 
       <section className="flex flex-col items-center justify-center flex-1 px-4 py-12">
         <div className="w-full max-w-lg text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-900/30 border border-purple-700/40 text-purple-300 text-xs font-medium mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            Live on Solana Devnet
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-900/30 border border-green-700/40 text-green-300 text-xs font-medium mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Live on Solana Mainnet
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
             Private{" "}

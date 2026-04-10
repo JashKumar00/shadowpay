@@ -7,6 +7,8 @@ import { Spinner } from "@/components/Spinner";
 import { StatusMessage } from "@/components/StatusMessage";
 import { useGetLink, useMarkLinkPaid, useClaimLink } from "@workspace/api-client-react";
 
+const EXPLORER_BASE = "https://explorer.solana.com/tx";
+
 export default function PayPage() {
   const params = useParams<{ linkId: string }>();
   const linkId = params.linkId;
@@ -18,7 +20,7 @@ export default function PayPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { data: link, isLoading, isError, refetch } = useGetLink(linkId, {
-    query: { enabled: !!linkId, refetchInterval: txSig ? false : 5000 },
+    query: { enabled: !!linkId, refetchInterval: txSig ? false : 4000 },
   });
   const markPaid = useMarkLinkPaid();
   const claimLink = useClaimLink();
@@ -29,27 +31,31 @@ export default function PayPage() {
     setError(null);
 
     try {
-      if (link.token !== "SOL") {
-        setError("USDC transfers require an SPL token account. Please ask the sender to use SOL.");
-        setSending(false);
-        return;
-      }
-
       const recipientPubkey = new PublicKey(link.recipientAddress!);
       const lamports = Math.round(link.amountSol * LAMPORTS_PER_SOL);
-      const transaction = new Transaction().add(
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+      const transaction = new Transaction({
+        recentBlockhash: blockhash,
+        feePayer: publicKey,
+      }).add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
           toPubkey: recipientPubkey,
           lamports,
         })
       );
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
 
-      const signature = await sendTransaction(transaction, connection);
-      await connection.confirmTransaction(signature, "confirmed");
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "processed",
+        maxRetries: 5,
+      });
+
+      await connection.confirmTransaction(
+        { signature, blockhash, lastValidBlockHeight },
+        "confirmed"
+      );
 
       await markPaid.mutateAsync({
         linkId,
@@ -79,7 +85,6 @@ export default function PayPage() {
         linkId,
         data: { claimantAddress: publicKey.toBase58() },
       });
-
       setTxSig(result.txSignature);
       setClaimedAmount(result.amountSol);
       refetch();
@@ -117,7 +122,6 @@ export default function PayPage() {
   const isSendType = link.type === "send";
   const isComplete = link.paid || !!txSig;
   const displaySig = txSig || link.txSignature;
-  const isClaimable = isSendType && link.funded && !link.paid && !txSig;
   const isNotFundedYet = isSendType && !link.funded;
 
   return (
@@ -138,8 +142,8 @@ export default function PayPage() {
               </h1>
               <p className="text-gray-400">
                 {isSendType
-                  ? `${(claimedAmount ?? link.amountSol).toFixed(6)} SOL was sent to your wallet.`
-                  : "This payment has been confirmed on-chain."}
+                  ? `${(claimedAmount ?? link.amountSol).toFixed(6)} SOL arrived in your wallet.`
+                  : "Payment confirmed on Solana Mainnet."}
               </p>
             </div>
           ) : isNotFundedYet ? (
@@ -218,7 +222,7 @@ export default function PayPage() {
             )}
             <div className="flex items-center justify-between">
               <span className="text-gray-400 text-sm">Network</span>
-              <span className="text-purple-400 text-sm font-semibold">Solana Devnet</span>
+              <span className="text-green-400 text-sm font-semibold">Solana Mainnet</span>
             </div>
           </div>
 
@@ -231,7 +235,7 @@ export default function PayPage() {
                   <p className="text-gray-500 text-xs mb-1">Transaction Signature</p>
                   <p className="text-green-300 text-xs font-mono break-all">{displaySig}</p>
                   <a
-                    href={`https://explorer.solana.com/tx/${displaySig}?cluster=devnet`}
+                    href={`${EXPLORER_BASE}/${displaySig}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block mt-2 text-purple-400 hover:text-purple-300 text-xs transition-colors"
@@ -245,7 +249,7 @@ export default function PayPage() {
               </Link>
             </div>
           ) : isNotFundedYet ? (
-            <div className="text-center text-gray-500 text-sm">
+            <div className="text-center">
               <button
                 onClick={() => refetch()}
                 className="text-purple-400 hover:text-purple-300 text-sm transition-colors"
@@ -278,7 +282,7 @@ export default function PayPage() {
                   <>
                     <Spinner />
                     <span className="text-sm">
-                      {isSendType ? "Claiming funds from escrow..." : "Sending transaction..."}
+                      {isSendType ? "Claiming from escrow..." : "Confirming on Mainnet..."}
                     </span>
                   </>
                 ) : isSendType ? (
@@ -287,16 +291,6 @@ export default function PayPage() {
                   `Pay ${link.amountSol} ${link.token}`
                 )}
               </button>
-              {sending && (
-                <div className="mt-3">
-                  <StatusMessage
-                    type="info"
-                    message={isSendType
-                      ? "Processing your claim from escrow..."
-                      : "Confirm the transaction in your wallet. Do not close this tab."}
-                  />
-                </div>
-              )}
             </>
           )}
         </div>

@@ -21,7 +21,7 @@ import {
   ClaimLinkBody,
 } from "@workspace/api-zod";
 
-const RPC_ENDPOINT = "https://api.devnet.solana.com";
+const RPC_ENDPOINT = "https://api.mainnet-beta.solana.com";
 const connection = new Connection(RPC_ENDPOINT, "confirmed");
 
 const router: IRouter = Router();
@@ -242,7 +242,7 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       return;
     }
 
-    const { blockhash } = await connection.getLatestBlockhash();
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
     const transaction = new Transaction({
       recentBlockhash: blockhash,
       feePayer: escrowKeypair.publicKey,
@@ -255,8 +255,16 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
     );
 
     transaction.sign(escrowKeypair);
-    const signature = await connection.sendRawTransaction(transaction.serialize());
-    await connection.confirmTransaction(signature, "confirmed");
+    const signature = await connection.sendRawTransaction(transaction.serialize(), {
+      skipPreflight: false,
+      preflightCommitment: "processed",
+      maxRetries: 5,
+    });
+
+    await connection.confirmTransaction(
+      { signature, blockhash, lastValidBlockHeight },
+      "confirmed"
+    );
 
     const [updated] = await db
       .update(paymentLinksTable)

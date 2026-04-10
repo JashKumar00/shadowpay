@@ -169,7 +169,7 @@ export default function ClaimPage() {
                     From: {tx.from.slice(0, 8)}...{tx.from.slice(-8)}
                   </div>
                   <a
-                    href={`https://explorer.solana.com/tx/${tx.signature}?cluster=devnet`}
+                    href={`https://explorer.solana.com/tx/${tx.signature}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-purple-400 hover:text-purple-300 text-xs transition-colors"

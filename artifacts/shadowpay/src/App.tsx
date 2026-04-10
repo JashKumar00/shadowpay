@@ -18,7 +18,7 @@ import HomePage from "@/pages/HomePage";
 import PayPage from "@/pages/PayPage";
 import ClaimPage from "@/pages/ClaimPage";
 
-const RPC_ENDPOINT = "https://api.devnet.solana.com";
+const RPC_ENDPOINT = "https://api.mainnet-beta.solana.com";
 const queryClient = new QueryClient();
 
 function NotFound() {

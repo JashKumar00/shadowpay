@@ -12,8 +12,8 @@ export function Header({ showClaimLink = false }: HeaderProps) {
       <Link href="/" className="flex items-center gap-2.5 group">
         <Logo size={30} />
         <span className="text-lg font-bold text-white">ShadowPay</span>
-        <span className="text-xs text-purple-400 border border-purple-800/60 rounded-full px-2 py-0.5 hidden sm:inline">
-          Solana Devnet
+        <span className="text-xs text-green-400 border border-green-800/60 rounded-full px-2 py-0.5 hidden sm:inline">
+          Mainnet
         </span>
       </Link>
       <div className="flex items-center gap-3">
