@@ -26,6 +26,13 @@ import ClaimPage from "@/pages/ClaimPage";
 const RPC_ENDPOINT =
   (import.meta.env.VITE_SOLANA_RPC_URL as string) ||
   "https://rpc.ankr.com/solana";
+
+const CONNECTION_CONFIG = {
+  commitment: "confirmed" as const,
+  confirmTransactionInitialTimeout: 30_000,
+  disableRetryOnRateLimit: false,
+};
+
 const queryClient = new QueryClient();
 
 function NotFound() {
@@ -78,7 +85,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ConnectionProvider endpoint={RPC_ENDPOINT}>
+      <ConnectionProvider endpoint={RPC_ENDPOINT} config={CONNECTION_CONFIG}>
         <WalletProvider wallets={wallets} autoConnect>
           <WalletModalProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>

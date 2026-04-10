@@ -19,8 +19,8 @@ const EXPLORER_BASE = "https://explorer.solana.com/tx";
 
 function buildMinFeeTx(...instructions: any[]) {
   return new Transaction().add(
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 3000 }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
     ...instructions
   );
 }
@@ -149,7 +149,7 @@ export default function PayPage() {
       const transferAmount = balance - feeEstimate;
       if (transferAmount <= 0) throw new Error("Insufficient balance in stealth address");
 
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
       const tx = buildMinFeeTx(
         SystemProgram.transfer({
           fromPubkey: stealthKeypair.publicKey,
@@ -162,9 +162,8 @@ export default function PayPage() {
       tx.sign(stealthKeypair);
 
       const sig = await connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "processed",
-        maxRetries: 5,
+        skipPreflight: true,
+        maxRetries: 3,
       });
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
       setSweepSig(sig);
@@ -183,16 +182,15 @@ export default function PayPage() {
     try {
       const recipientPubkey = new PublicKey(link.recipientAddress!);
       const lamports = Math.round(link.amountSol * LAMPORTS_PER_SOL);
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
       const transaction = buildMinFeeTx(
         SystemProgram.transfer({ fromPubkey: publicKey, toPubkey: recipientPubkey, lamports })
       );
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
       const signature = await sendTransaction(transaction, connection, {
-        skipPreflight: false,
-        preflightCommitment: "processed",
-        maxRetries: 5,
+        skipPreflight: true,
+        maxRetries: 3,
       });
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
       await markPaid.mutateAsync({ linkId, data: { txSignature: signature, payerAddress: publicKey.toBase58() } });

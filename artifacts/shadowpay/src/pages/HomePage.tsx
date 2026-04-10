@@ -18,8 +18,8 @@ type Mode = "send" | "receive";
 
 function buildMinFeeTx(...instructions: any[]) {
   return new Transaction().add(
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 3000 }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
     ...instructions
   );
 }
