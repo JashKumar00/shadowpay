@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { WalletButton } from "./WalletButton";
 
 interface HeaderProps {
   showClaimLink?: boolean;
@@ -9,8 +9,8 @@ export function Header({ showClaimLink = false }: HeaderProps) {
   const [, navigate] = useLocation();
 
   return (
-    <header className="relative z-10 flex items-center justify-between px-5 py-3.5 border-b border-white/5"
-      style={{ background: "rgba(6,6,16,0.85)", backdropFilter: "blur(24px)" }}>
+    <header className="relative flex items-center justify-between px-5 py-3.5 border-b border-white/5"
+      style={{ background: "rgba(6,6,16,0.85)", backdropFilter: "blur(24px)", zIndex: 50 }}>
       <button
         onClick={() => navigate("/")}
         className="flex items-center gap-2.5 group cursor-pointer"
@@ -50,7 +50,7 @@ export function Header({ showClaimLink = false }: HeaderProps) {
             My Payments
           </button>
         )}
-        <WalletMultiButton />
+        <WalletButton />
       </div>
     </header>
   );
