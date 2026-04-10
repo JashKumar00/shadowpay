@@ -231,13 +231,19 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
     const escrowKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKeyArray));
     const claimantPubkey = new PublicKey(parsed.data.claimantAddress);
 
-    const escrowBalance = await connection.getBalance(escrowKeypair.publicKey);
+    // Retry balance check once to handle RPC propagation lag
+    let escrowBalance = await connection.getBalance(escrowKeypair.publicKey);
+    if (escrowBalance === 0) {
+      await new Promise((r) => setTimeout(r, 2000));
+      escrowBalance = await connection.getBalance(escrowKeypair.publicKey);
+    }
     if (escrowBalance === 0) {
       res.status(400).json({ error: "Escrow has no funds" });
       return;
     }
 
-    const feeEstimate = 5000;
+    // signature fee (5000) + priority fee: 2000 CU × 50000 µL / 1_000_000 = 100 L → use 5200 for safety
+    const feeEstimate = 5200;
     const transferAmount = escrowBalance - feeEstimate;
     if (transferAmount <= 0) {
       res.status(400).json({ error: "Escrow balance too low to cover fees" });

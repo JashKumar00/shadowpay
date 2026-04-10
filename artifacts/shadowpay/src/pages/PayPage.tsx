@@ -52,6 +52,9 @@ export default function PayPage() {
   const [sending, setSending] = useState(false);
   const [txSig, setTxSig] = useState<string | null>(null);
 
+  const [escrowOnChainBalance, setEscrowOnChainBalance] = useState<number | null>(null);
+  const [escrowBalanceChecking, setEscrowBalanceChecking] = useState(false);
+
   const { data: link, isLoading, isError, refetch } = useGetLink(linkId, {
     query: { enabled: !!linkId, refetchInterval: (claimed || !!txSig) ? false : 4000 },
   });
@@ -80,6 +83,39 @@ export default function PayPage() {
     const id = setInterval(poll, 3000);
     return () => clearInterval(id);
   }, [stealthKeypair, claimed, connection]);
+
+  // Poll live escrow balance so receiver sees real on-chain status before claiming
+  useEffect(() => {
+    if (!link?.escrowPublicKey || !link.funded || claimed) return;
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const pub = new PublicKey(link.escrowPublicKey!);
+        const bal = await connection.getBalance(pub);
+        if (!cancelled) setEscrowOnChainBalance(bal / LAMPORTS_PER_SOL);
+      } catch {
+        if (!cancelled) setEscrowOnChainBalance(null);
+      }
+    };
+    check();
+    const id = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [link?.escrowPublicKey, link?.funded, claimed, connection]);
+
+  async function refreshEscrowBalance() {
+    if (!link?.escrowPublicKey) return;
+    setEscrowBalanceChecking(true);
+    try {
+      const pub = new PublicKey(link.escrowPublicKey);
+      const bal = await connection.getBalance(pub);
+      setEscrowOnChainBalance(bal / LAMPORTS_PER_SOL);
+      setError(null);
+    } catch (e: any) {
+      setEscrowOnChainBalance(null);
+    } finally {
+      setEscrowBalanceChecking(false);
+    }
+  }
 
   async function handleStealthClaim() {
     if (!stealthKeypair || !link) return;
@@ -343,6 +379,56 @@ export default function PayPage() {
           {/* ── STEALTH CLAIM FLOW ── */}
           {isStealthMode && !claimed && !isNotFundedYet && (
             <div className="space-y-3">
+
+              {/* Live escrow balance indicator */}
+              {escrowOnChainBalance !== null && (
+                <div className="flex items-center justify-between rounded-xl px-4 py-3 text-xs"
+                  style={{
+                    background: escrowOnChainBalance > 0 ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)",
+                    border: `1px solid ${escrowOnChainBalance > 0 ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                  }}>
+                  <span className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${escrowOnChainBalance > 0 ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
+                    <span className={escrowOnChainBalance > 0 ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+                      {escrowOnChainBalance > 0 ? "Escrow funded on-chain" : "Escrow has no funds on-chain"}
+                    </span>
+                  </span>
+                  <span className={`font-mono font-bold ${escrowOnChainBalance > 0 ? "text-green-300" : "text-red-300"}`}>
+                    {escrowOnChainBalance.toFixed(6)} SOL
+                  </span>
+                </div>
+              )}
+
+              {/* Empty escrow warning with refresh */}
+              {escrowOnChainBalance !== null && escrowOnChainBalance === 0 && (
+                <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                  <div className="flex items-start gap-2.5">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <div>
+                      <p className="text-red-300 text-xs font-semibold mb-1">Escrow account is empty on-chain</p>
+                      <p className="text-gray-500 text-xs leading-relaxed">
+                        The sender's funding transaction may still be confirming, or it was rejected. Wait a few seconds and refresh — funds typically appear within 1–2 seconds on Solana.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={refreshEscrowBalance}
+                    disabled={escrowBalanceChecking}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold text-red-300 transition-all disabled:opacity-40"
+                    style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  >
+                    {escrowBalanceChecking ? (
+                      <><Spinner /><span>Checking...</span></>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Refresh escrow balance
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
               <div className="rounded-xl p-4 text-sm space-y-2.5" style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.18)" }}>
                 <div className="flex items-center gap-2 text-violet-300 font-bold text-xs uppercase tracking-wider">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -364,8 +450,8 @@ export default function PayPage() {
 
               <button
                 onClick={handleStealthClaim}
-                disabled={claiming}
-                className="w-full text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                disabled={claiming || (escrowOnChainBalance !== null && escrowOnChainBalance === 0)}
+                className="w-full text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", boxShadow: "0 0 25px rgba(124,58,237,0.4)" }}
               >
                 {claiming ? (
