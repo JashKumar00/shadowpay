@@ -21,7 +21,8 @@ import {
   ClaimLinkBody,
 } from "@workspace/api-zod";
 
-const RPC_ENDPOINT = "https://rpc.ankr.com/solana";
+const RPC_ENDPOINT =
+  process.env.SOLANA_RPC_URL || "https://rpc.ankr.com/solana";
 const connection = new Connection(RPC_ENDPOINT, "confirmed");
 
 const router: IRouter = Router();

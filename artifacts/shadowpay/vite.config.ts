@@ -30,6 +30,9 @@ export default defineConfig({
   define: {
     "global": "globalThis",
     "process.env": "{}",
+    "import.meta.env.VITE_SOLANA_RPC_URL": JSON.stringify(
+      process.env.SOLANA_RPC_URL || "https://rpc.ankr.com/solana"
+    ),
   },
   plugins: [
     react(),
@@ -52,9 +55,11 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
-      buffer: "buffer",
     },
     dedupe: ["react", "react-dom"],
+  },
+  optimizeDeps: {
+    include: ["buffer"],
   },
   root: path.resolve(import.meta.dirname),
   build: {

@@ -18,7 +18,9 @@ import HomePage from "@/pages/HomePage";
 import PayPage from "@/pages/PayPage";
 import ClaimPage from "@/pages/ClaimPage";
 
-const RPC_ENDPOINT = "https://rpc.ankr.com/solana";
+const RPC_ENDPOINT =
+  (import.meta.env.VITE_SOLANA_RPC_URL as string) ||
+  "https://rpc.ankr.com/solana";
 const queryClient = new QueryClient();
 
 function NotFound() {
