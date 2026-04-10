@@ -319,13 +319,13 @@ export default function HomePage() {
                         borderColor: "rgba(255,255,255,0.07)",
                       }}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
-                        t === "SOL"
-                          ? "bg-gradient-to-br from-purple-500 via-violet-600 to-pink-600"
-                          : "bg-gradient-to-br from-blue-500 to-cyan-400"
-                      }`}
-                        style={{ boxShadow: t === "SOL" ? "0 0 12px rgba(124,58,237,0.5)" : "0 0 12px rgba(6,182,212,0.4)" }}>
-                        {t === "SOL" ? "◎" : "$"}
+                      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+                        style={{ boxShadow: t === "SOL" ? "0 0 12px rgba(124,58,237,0.55)" : "0 0 12px rgba(6,182,212,0.45)" }}>
+                        <img
+                          src={t === "SOL" ? "/sol-logo.png" : "/usdc-logo.png"}
+                          alt={t}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <div className="flex-1">
                         <div className={`text-sm font-bold ${token === t ? "text-white" : "text-gray-500"}`}>{t}</div>
