@@ -116,11 +116,11 @@ export function WalletButton() {
         <div
           className="absolute right-0 rounded-xl overflow-hidden"
           style={{
-            bottom: "calc(100% + 8px)",
+            top: "calc(100% + 8px)",
             minWidth: "180px",
             background: "rgba(12,14,26,0.97)",
             border: "1px solid rgba(124,58,237,0.35)",
-            boxShadow: "0 -8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.12)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.12)",
             zIndex: 9999,
           }}
         >
