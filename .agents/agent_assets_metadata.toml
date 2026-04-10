@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "eKGRre9y2jfXqbRv6Xd3-"
@@ -12,3 +11,9 @@ id = "vjlHagkOAcEeuW_nEqefl"
 uri = "file://artifacts/shadowpay-deck/public/solana-network.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "l3OK141ZjV3xYmfYhdbOb"
+uri = "file://screenshots/ShadowPay-Pitch-Deck.pdf"
+type = "pdf"
+title = "ShadowPay Pitch Deck — 7 slides (PDF)"
