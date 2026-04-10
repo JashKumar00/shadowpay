@@ -11,6 +11,7 @@ import { Header } from "@/components/Header";
 import { Background } from "@/components/Background";
 import { Spinner } from "@/components/Spinner";
 import { useCreateLink, useMarkLinkFunded } from "@workspace/api-client-react";
+import { generateSecret } from "@/lib/stealth";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 type Mode = "send" | "receive";
@@ -121,7 +122,10 @@ export default function HomePage() {
       });
 
       const origin = window.location.origin;
-      const link = `${origin}${BASE_URL}/pay/${result.id}`;
+      const secret = mode === "send" ? generateSecret() : null;
+      const link = secret
+        ? `${origin}${BASE_URL}/pay/${result.id}#${secret}`
+        : `${origin}${BASE_URL}/pay/${result.id}`;
       setGeneratedLink(link);
 
       if (mode === "send" && result.escrowPublicKey) {
