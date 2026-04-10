@@ -8,3 +8,45 @@
 export interface HealthStatus {
   status: string;
 }
+
+export type CreateLinkBodyToken =
+  (typeof CreateLinkBodyToken)[keyof typeof CreateLinkBodyToken];
+
+export const CreateLinkBodyToken = {
+  SOL: "SOL",
+  USDC: "USDC",
+} as const;
+
+export interface CreateLinkBody {
+  recipientAddress: string;
+  amountSol: number;
+  /** @nullable */
+  note?: string | null;
+  token: CreateLinkBodyToken;
+}
+
+export interface PaymentLink {
+  id: string;
+  recipientAddress: string;
+  amountSol: number;
+  /** @nullable */
+  note: string | null;
+  token: string;
+  paid: boolean;
+  /** @nullable */
+  txSignature: string | null;
+  /** @nullable */
+  payerAddress: string | null;
+  createdAt: string;
+  /** @nullable */
+  paidAt: string | null;
+}
+
+export interface MarkLinkPaidBody {
+  txSignature: string;
+  payerAddress: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+}

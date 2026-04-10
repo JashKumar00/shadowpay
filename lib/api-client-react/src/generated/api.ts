@@ -5,18 +5,27 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CreateLinkBody,
+  ErrorResponse,
+  HealthStatus,
+  MarkLinkPaidBody,
+  PaymentLink,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +108,253 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Create a payment link
+ */
+export const getCreateLinkUrl = () => {
+  return `/api/links`;
+};
+
+export const createLink = async (
+  createLinkBody: CreateLinkBody,
+  options?: RequestInit,
+): Promise<PaymentLink> => {
+  return customFetch<PaymentLink>(getCreateLinkUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createLinkBody),
+  });
+};
+
+export const getCreateLinkMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLink>>,
+    TError,
+    { data: BodyType<CreateLinkBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLink>>,
+  TError,
+  { data: BodyType<CreateLinkBody> },
+  TContext
+> => {
+  const mutationKey = ["createLink"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLink>>,
+    { data: BodyType<CreateLinkBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLink(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLink>>
+>;
+export type CreateLinkMutationBody = BodyType<CreateLinkBody>;
+export type CreateLinkMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a payment link
+ */
+export const useCreateLink = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLink>>,
+    TError,
+    { data: BodyType<CreateLinkBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLink>>,
+  TError,
+  { data: BodyType<CreateLinkBody> },
+  TContext
+> => {
+  return useMutation(getCreateLinkMutationOptions(options));
+};
+
+/**
+ * @summary Get a payment link by ID
+ */
+export const getGetLinkUrl = (linkId: string) => {
+  return `/api/links/${linkId}`;
+};
+
+export const getLink = async (
+  linkId: string,
+  options?: RequestInit,
+): Promise<PaymentLink> => {
+  return customFetch<PaymentLink>(getGetLinkUrl(linkId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLinkQueryKey = (linkId: string) => {
+  return [`/api/links/${linkId}`] as const;
+};
+
+export const getGetLinkQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLink>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  linkId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getLink>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLinkQueryKey(linkId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLink>>> = ({
+    signal,
+  }) => getLink(linkId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!linkId,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getLink>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetLinkQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLink>>
+>;
+export type GetLinkQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a payment link by ID
+ */
+
+export function useGetLink<
+  TData = Awaited<ReturnType<typeof getLink>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  linkId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getLink>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLinkQueryOptions(linkId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark a payment link as paid
+ */
+export const getMarkLinkPaidUrl = (linkId: string) => {
+  return `/api/links/${linkId}/pay`;
+};
+
+export const markLinkPaid = async (
+  linkId: string,
+  markLinkPaidBody: MarkLinkPaidBody,
+  options?: RequestInit,
+): Promise<PaymentLink> => {
+  return customFetch<PaymentLink>(getMarkLinkPaidUrl(linkId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(markLinkPaidBody),
+  });
+};
+
+export const getMarkLinkPaidMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markLinkPaid>>,
+    TError,
+    { linkId: string; data: BodyType<MarkLinkPaidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markLinkPaid>>,
+  TError,
+  { linkId: string; data: BodyType<MarkLinkPaidBody> },
+  TContext
+> => {
+  const mutationKey = ["markLinkPaid"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markLinkPaid>>,
+    { linkId: string; data: BodyType<MarkLinkPaidBody> }
+  > = (props) => {
+    const { linkId, data } = props ?? {};
+
+    return markLinkPaid(linkId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkLinkPaidMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markLinkPaid>>
+>;
+export type MarkLinkPaidMutationBody = BodyType<MarkLinkPaidBody>;
+export type MarkLinkPaidMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a payment link as paid
+ */
+export const useMarkLinkPaid = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markLinkPaid>>,
+    TError,
+    { linkId: string; data: BodyType<MarkLinkPaidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markLinkPaid>>,
+  TError,
+  { linkId: string; data: BodyType<MarkLinkPaidBody> },
+  TContext
+> => {
+  return useMutation(getMarkLinkPaidMutationOptions(options));
+};

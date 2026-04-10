@@ -1,60 +1,46 @@
 import { useState } from "react";
-import { nanoid } from "nanoid";
-import { Link } from "wouter";
-import { WalletButton } from "@/components/WalletButton";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Header } from "@/components/Header";
 import { Spinner } from "@/components/Spinner";
 import { StatusMessage } from "@/components/StatusMessage";
-import { useWallet } from "@/components/WalletProvider";
-import { saveLink } from "@/lib/links";
-import { USDC_MINT, USDC_DECIMALS } from "@/lib/constants";
+import { useCreateLink } from "@workspace/api-client-react";
+
+const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 export default function HomePage() {
-  const { wallet, account } = useWallet();
-  const [amount, setAmount] = useState("10");
-  const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("");
+  const { publicKey, connected } = useWallet();
+  const [amount, setAmount] = useState("0.1");
+  const [token, setToken] = useState<"SOL" | "USDC">("SOL");
+  const [note, setNote] = useState("");
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const createLink = useCreateLink();
+
   async function handleGenerate() {
-    if (!wallet || !account) { setError("Please connect your wallet first."); return; }
+    if (!publicKey) { setError("Please connect your wallet first."); return; }
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) { setError("Enter a valid amount."); return; }
 
-    setLoading(true);
     setError(null);
     setGeneratedLink(null);
 
     try {
-      setLoadingMsg("Connecting to Umbra protocol...");
-      const { createUmbraClient } = await import("@/lib/umbra");
-      const { client } = await createUmbraClient(wallet, account);
-
-      setLoadingMsg("Registering your wallet with Umbra (sign the message in your wallet)...");
-      const { getUserRegistrationFunction } = await import("@umbra-privacy/sdk");
-      const register = getUserRegistrationFunction({ client });
-      await register({ confidential: true, anonymous: true });
-
-      setLoadingMsg("Generating your private payment link...");
-      const linkId = nanoid(12);
-      const amountRaw = BigInt(Math.round(amountNum * 10 ** USDC_DECIMALS)).toString();
-
-      saveLink({
-        linkId,
-        recipientAddress: account.address,
-        mint: USDC_MINT,
-        amount: amountRaw,
-        createdAt: Date.now(),
+      const result = await createLink.mutateAsync({
+        data: {
+          recipientAddress: publicKey.toBase58(),
+          amountSol: amountNum,
+          note: note.trim() || null,
+          token,
+        },
       });
 
-      const link = `${window.location.origin}/pay/${linkId}`;
+      const origin = window.location.origin;
+      const link = `${origin}${BASE_URL}/pay/${result.id}`;
       setGeneratedLink(link);
     } catch (e: any) {
-      setError(e?.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-      setLoadingMsg("");
+      setError(e?.data?.error || e?.message || "Something went wrong. Please try again.");
     }
   }
 
@@ -67,110 +53,136 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen flex flex-col bg-[#0a0a0f] text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="16" fill="#7c3aed" opacity="0.2"/>
-            <path d="M16 6C10.477 6 6 10.477 6 16s4.477 10 10 10 10-4.477 10-10S21.523 6 16 6zm0 4a2 2 0 110 4 2 2 0 010-4zm0 14c-2.76 0-5.2-1.4-6.674-3.54C10.865 18.88 13.38 18 16 18s5.136.88 6.674 2.46C21.2 22.6 18.76 24 16 24z" fill="#a855f7"/>
-          </svg>
-          <span className="text-xl font-bold text-white">ShadowPay</span>
-          <span className="text-xs text-purple-400 border border-purple-800 rounded px-2 py-0.5">Private Payments</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/claim" className="text-sm text-purple-300 hover:text-purple-100 transition-colors">
-            Claim Payments →
-          </Link>
-          <WalletButton />
-        </div>
-      </header>
+      <Header showClaimLink />
 
-      <section className="flex flex-col items-center justify-center flex-1 px-4 py-16 text-center">
-        <div className="mb-6">
-          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="mx-auto mb-4">
-            <circle cx="40" cy="40" r="40" fill="#7c3aed" opacity="0.15"/>
-            <path d="M40 16C27.85 16 18 25.85 18 38c0 7.18 3.56 13.52 9.04 17.42L25 58h30l-2.04-2.58C58.44 51.52 62 45.18 62 38c0-12.15-9.85-22-22-22zm0 6a4 4 0 110 8 4 4 0 010-8zm0 34c-5.52 0-10.4-2.8-13.35-7.08 2.73-2.46 7.56-4.92 13.35-4.92s10.62 2.46 13.35 4.92C50.4 53.2 45.52 56 40 56z" fill="#a855f7"/>
-          </svg>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            Send Money.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-300">Leave No Trace.</span>
+      <section className="flex flex-col items-center justify-center flex-1 px-4 py-12">
+        <div className="w-full max-w-lg text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-900/30 border border-purple-700/40 text-purple-300 text-xs font-medium mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            Live on Solana Devnet
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
+            Create a Private<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-300">
+              Payment Link
+            </span>
           </h1>
-          <p className="text-gray-400 text-lg max-w-md mx-auto">
-            Create a private payment link. Share it with anyone. They pay you — completely onchain, completely private. No one can see who paid who.
+          <p className="text-gray-400 text-base max-w-md mx-auto">
+            Connect your wallet, set an amount, and share the link. Anyone with the link can send you real SOL or USDC directly on-chain.
           </p>
         </div>
 
-        <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-6 text-left">
-          <h2 className="text-lg font-semibold text-white mb-4">Create Payment Link</h2>
+        <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h2 className="text-base font-semibold text-white mb-5">Payment Details</h2>
 
           <div className="mb-4">
-            <label className="text-sm text-gray-400 mb-1 block">Token</label>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold">$</div>
-              <span className="text-white font-medium">USDC</span>
-              <span className="text-gray-500 text-xs ml-auto font-mono">EPjFW...t1v</span>
+            <label className="text-sm text-gray-400 mb-1.5 block">Token</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["SOL", "USDC"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setToken(t)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                    token === t
+                      ? "bg-purple-600/30 border-purple-500 text-white"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    t === "SOL" ? "bg-gradient-to-br from-purple-500 to-pink-500" : "bg-blue-500"
+                  }`}>
+                    {t === "SOL" ? "◎" : "$"}
+                  </div>
+                  {t}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="mb-5">
-            <label className="text-sm text-gray-400 mb-1 block">Amount (USDC)</label>
+          <div className="mb-4">
+            <label className="text-sm text-gray-400 mb-1.5 block">Amount ({token})</label>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              min="0.01"
+              min="0.000001"
               step="0.01"
-              placeholder="10.00"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-lg font-semibold outline-none focus:border-purple-500 transition-colors"
+              placeholder={token === "SOL" ? "0.1" : "10.00"}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-xl font-semibold outline-none focus:border-purple-500 transition-colors placeholder:text-gray-600"
+            />
+          </div>
+
+          <div className="mb-5">
+            <label className="text-sm text-gray-400 mb-1.5 block">Note (optional)</label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. For dinner last night"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500 transition-colors placeholder:text-gray-600"
             />
           </div>
 
           {error && <div className="mb-4"><StatusMessage type="error" message={error} /></div>}
 
-          {!account && (
-            <div className="mb-4">
-              <StatusMessage type="info" message="Connect your wallet to generate a link." />
+          {connected && publicKey && (
+            <div className="mb-4 flex items-center gap-2 text-xs text-gray-500 bg-white/3 border border-white/8 rounded-lg px-3 py-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+              <span className="font-mono truncate">Payments go to: {publicKey.toBase58().slice(0, 8)}...{publicKey.toBase58().slice(-8)}</span>
             </div>
           )}
 
           <button
             onClick={handleGenerate}
-            disabled={loading || !account}
-            className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+            disabled={createLink.isPending || !connected}
+            className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
           >
-            {loading ? (
+            {createLink.isPending ? (
               <>
                 <Spinner />
-                <span className="text-sm">{loadingMsg}</span>
+                <span>Creating link...</span>
               </>
+            ) : !connected ? (
+              "Connect wallet to continue"
             ) : (
-              "Generate Private Payment Link"
+              "Generate Payment Link"
             )}
           </button>
 
           {generatedLink && (
             <div className="mt-5 p-4 bg-green-900/20 border border-green-500/30 rounded-xl">
-              <p className="text-green-400 text-sm font-semibold mb-2">Your private payment link is ready!</p>
-              <p className="text-white text-xs font-mono break-all bg-black/30 rounded px-2 py-2 mb-3">{generatedLink}</p>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <polyline points="10 3 4.5 8.5 2 6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <p className="text-green-400 text-sm font-semibold">Payment link created!</p>
+              </div>
+              <div className="bg-black/30 rounded-lg px-3 py-2 mb-3 break-all">
+                <p className="text-green-300 text-xs font-mono">{generatedLink}</p>
+              </div>
               <button
                 onClick={handleCopy}
                 className="w-full bg-green-700 hover:bg-green-600 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
               >
                 {copied ? "Copied!" : "Copy Link"}
               </button>
-              <p className="text-gray-400 text-xs mt-2 text-center">Share this link with your payer. Their payment cannot be traced to you.</p>
+              <p className="text-gray-500 text-xs mt-2 text-center">Share this link. The sender pays you directly on-chain.</p>
             </div>
           )}
         </div>
 
-        <div className="w-full max-w-2xl mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+        <div className="w-full max-w-lg mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { title: "1. Create Link", desc: "You generate a payment link. Your wallet address is stored only in your browser — not on-chain." },
-            { title: "2. Payer Sends", desc: "The sender pays through Umbra's zero-knowledge mixer. No on-chain link between sender and receiver." },
-            { title: "3. You Claim", desc: "Claim your payment into a private encrypted balance. Only you can see your balance." },
+            { num: "1", title: "Connect & Create", desc: "Connect your wallet and set the amount you want to receive." },
+            { num: "2", title: "Share the Link", desc: "Send the link to anyone — works in any browser, any device." },
+            { num: "3", title: "Receive Instantly", desc: "They pay with their wallet. Funds arrive directly on-chain." },
           ].map((step) => (
-            <div key={step.title} className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <div className="text-white font-semibold mb-1">{step.title}</div>
-              <div className="text-gray-400 text-sm">{step.desc}</div>
+            <div key={step.num} className="bg-white/3 border border-white/8 rounded-xl p-4">
+              <div className="text-purple-400 font-bold text-sm mb-1 font-mono">Step {step.num}</div>
+              <div className="text-white text-sm font-semibold mb-1">{step.title}</div>
+              <div className="text-gray-500 text-xs leading-relaxed">{step.desc}</div>
             </div>
           ))}
         </div>

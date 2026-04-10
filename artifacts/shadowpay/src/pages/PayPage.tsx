@@ -1,92 +1,75 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "wouter";
-import { WalletButton } from "@/components/WalletButton";
+import { useParams } from "wouter";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Header } from "@/components/Header";
 import { Spinner } from "@/components/Spinner";
 import { StatusMessage } from "@/components/StatusMessage";
-import { useWallet } from "@/components/WalletProvider";
-import { getLink, PaymentLink } from "@/lib/links";
-import { USDC_DECIMALS } from "@/lib/constants";
+import { useGetLink, useMarkLinkPaid } from "@workspace/api-client-react";
 
 export default function PayPage() {
   const params = useParams<{ linkId: string }>();
   const linkId = params.linkId;
-  const { wallet, account } = useWallet();
-  const [link, setLink] = useState<PaymentLink | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("");
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const { connection } = useConnection();
+  const [sending, setSending] = useState(false);
   const [txSig, setTxSig] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const found = getLink(linkId);
-    if (!found) setNotFound(true);
-    else setLink(found);
-  }, [linkId]);
-
-  const displayAmount = link
-    ? (Number(link.amount) / 10 ** USDC_DECIMALS).toFixed(2)
-    : "0";
+  const { data: link, isLoading, isError } = useGetLink(linkId, {
+    query: { enabled: !!linkId, refetchInterval: txSig ? false : 5000 },
+  });
+  const markPaid = useMarkLinkPaid();
 
   async function handlePay() {
-    if (!wallet || !account) { setError("Please connect your wallet first."); return; }
-    if (!link) return;
-
-    setLoading(true);
+    if (!publicKey || !link) return;
+    setSending(true);
     setError(null);
-    setTxSig(null);
 
     try {
-      setLoadingMsg("Connecting to Umbra protocol...");
-      const { createUmbraClient } = await import("@/lib/umbra");
-      const { client } = await createUmbraClient(wallet, account);
+      const recipientPubkey = new PublicKey(link.recipientAddress);
 
-      setLoadingMsg("Registering your wallet with Umbra (sign the message in your wallet)...");
-      const { getUserRegistrationFunction, getPublicBalanceToReceiverClaimableUtxoCreatorFunction } = await import("@umbra-privacy/sdk");
-      const register = getUserRegistrationFunction({ client });
-      await register({ confidential: true, anonymous: true });
+      if (link.token === "SOL") {
+        const lamports = Math.round(link.amountSol * LAMPORTS_PER_SOL);
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: recipientPubkey,
+            lamports,
+          })
+        );
 
-      setLoadingMsg("Generating zero-knowledge proof... this may take 30-60 seconds");
-      const { getPublicBalanceToReceiverClaimableUtxoCreatorProver } = await import("@umbra-privacy/web-zk-prover");
-      const zkProver = getPublicBalanceToReceiverClaimableUtxoCreatorProver();
-      const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
-        { client },
-        { zkProver },
-      );
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = publicKey;
 
-      setLoadingMsg("Submitting private transaction to Solana...");
-      const result = await createUtxo({
-        destinationAddress: link.recipientAddress as any,
-        mint: link.mint as any,
-        amount: BigInt(link.amount),
-      });
+        const signature = await sendTransaction(transaction, connection);
+        await connection.confirmTransaction(signature, "confirmed");
 
-      const sig = Array.isArray(result) ? result[0] : (result as any)?.signature || "confirmed";
-      setTxSig(sig);
+        await markPaid.mutateAsync({
+          linkId,
+          data: {
+            txSignature: signature,
+            payerAddress: publicKey.toBase58(),
+          },
+        });
+
+        setTxSig(signature);
+      } else {
+        setError("USDC transfers require an SPL token account. Please use SOL for now.");
+      }
     } catch (e: any) {
-      setError(e?.message || "Payment failed. Please try again.");
+      if (e?.name === "WalletSignTransactionError" || e?.message?.includes("rejected")) {
+        setError("Transaction was rejected in your wallet.");
+      } else {
+        setError(e?.message || "Transaction failed. Please try again.");
+      }
     } finally {
-      setLoading(false);
-      setLoadingMsg("");
+      setSending(false);
     }
   }
 
-  if (notFound) {
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-[#0a0a0f] text-white">
-        <div className="text-center max-w-md">
-          <div className="text-5xl mb-4 font-bold text-purple-400">404</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Link Not Found</h1>
-          <p className="text-gray-400 mb-6">This payment link doesn't exist or has expired. Payment links are stored locally and only work on the device that created them.</p>
-          <Link href="/" className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl font-semibold transition-colors inline-block">
-            Create Your Own Link
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  if (!link) {
+  if (isLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
         <Spinner />
@@ -94,87 +77,127 @@ export default function PayPage() {
     );
   }
 
+  if (isError || !link) {
+    return (
+      <main className="min-h-screen flex flex-col bg-[#0a0a0f] text-white">
+        <Header />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+          <div className="text-5xl font-bold text-purple-400 mb-4">404</div>
+          <h1 className="text-2xl font-bold text-white mb-2">Link Not Found</h1>
+          <p className="text-gray-400 mb-6 max-w-sm">This payment link doesn't exist or has been removed.</p>
+          <a href="/" className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
+            Create Your Own Link
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  const explorerUrl = `https://explorer.solana.com/tx/${txSig}?cluster=devnet`;
+  const isPaid = link.paid || !!txSig;
+  const displaySig = txSig || link.txSignature;
+
   return (
     <main className="min-h-screen flex flex-col bg-[#0a0a0f] text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <Link href="/" className="flex items-center gap-2">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="16" fill="#7c3aed" opacity="0.2"/>
-            <path d="M16 6C10.477 6 6 10.477 6 16s4.477 10 10 10 10-4.477 10-10S21.523 6 16 6zm0 4a2 2 0 110 4 2 2 0 010-4zm0 14c-2.76 0-5.2-1.4-6.674-3.54C10.865 18.88 13.38 18 16 18s5.136.88 6.674 2.46C21.2 22.6 18.76 24 16 24z" fill="#a855f7"/>
-          </svg>
-          <span className="text-lg font-bold text-white">ShadowPay</span>
-        </Link>
-        <WalletButton />
-      </header>
+      <Header />
 
       <section className="flex flex-col items-center justify-center flex-1 px-4 py-12">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-purple-900/30 border border-purple-700/40 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
+          {isPaid ? (
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold text-green-400 mb-2">Payment Complete!</h1>
+              <p className="text-gray-400">This payment has been confirmed on-chain.</p>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Private Payment Request</h1>
-            <p className="text-gray-400">Someone is requesting a private payment. Your transaction will be completely anonymous on-chain.</p>
-          </div>
+          ) : (
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-purple-900/30 border border-purple-700/40 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-2">Payment Request</h1>
+              <p className="text-gray-400">Connect your wallet to send payment directly on-chain.</p>
+            </div>
+          )}
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-5">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
-              <span className="text-gray-400">Amount</span>
-              <span className="text-3xl font-bold text-white">{displayAmount} <span className="text-blue-400">USDC</span></span>
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/8">
+              <span className="text-gray-400 text-sm">Amount</span>
+              <span className="text-3xl font-bold text-white">
+                {link.amountSol} <span className="text-purple-400">{link.token}</span>
+              </span>
             </div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm">Recipient</span>
-              <span className="text-gray-300 text-xs font-mono">
-                {link.recipientAddress.slice(0, 6)}...{link.recipientAddress.slice(-6)} (private)
+            {link.note && (
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-gray-400 text-sm">Note</span>
+                <span className="text-gray-200 text-sm italic">"{link.note}"</span>
+              </div>
+            )}
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-gray-400 text-sm shrink-0">Recipient</span>
+              <span className="text-gray-300 text-xs font-mono ml-3 text-right break-all">
+                {link.recipientAddress.slice(0, 6)}...{link.recipientAddress.slice(-6)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400 text-sm">Privacy</span>
-              <span className="text-green-400 text-sm font-semibold">Zero-Knowledge Mixer</span>
+              <span className="text-gray-400 text-sm">Network</span>
+              <span className="text-purple-400 text-sm font-semibold">Solana Devnet</span>
             </div>
           </div>
 
           {error && <div className="mb-4"><StatusMessage type="error" message={error} /></div>}
-          {!account && <div className="mb-4"><StatusMessage type="info" message="Connect your wallet to send this payment." /></div>}
 
-          {txSig ? (
-            <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-6 text-center">
-              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-green-400 mb-2">Payment Sent Privately!</h2>
-              <p className="text-gray-400 text-sm mb-3">Your payment was routed through Umbra's zero-knowledge mixer. There is no on-chain link between you and the recipient.</p>
-              <div className="bg-black/30 rounded px-3 py-2">
-                <p className="text-gray-500 text-xs mb-1">Transaction</p>
-                <p className="text-green-300 text-xs font-mono break-all">{txSig}</p>
-              </div>
+          {isPaid ? (
+            <div className="space-y-3">
+              {displaySig && (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
+                  <p className="text-gray-500 text-xs mb-1">Transaction Signature</p>
+                  <p className="text-green-300 text-xs font-mono break-all">{displaySig}</p>
+                  <a
+                    href={`https://explorer.solana.com/tx/${displaySig}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-purple-400 hover:text-purple-300 text-xs transition-colors"
+                  >
+                    View on Solana Explorer →
+                  </a>
+                </div>
+              )}
             </div>
           ) : (
-            <button
-              onClick={handlePay}
-              disabled={loading || !account}
-              className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-lg"
-            >
-              {loading ? (
-                <>
-                  <Spinner />
-                  <span className="text-sm">{loadingMsg}</span>
-                </>
-              ) : (
-                `Send ${displayAmount} USDC Privately`
+            <>
+              {!connected && (
+                <div className="mb-4">
+                  <StatusMessage type="info" message="Connect your wallet above to send this payment." />
+                </div>
               )}
-            </button>
-          )}
-
-          {loading && (
-            <div className="mt-4">
-              <StatusMessage type="info" message="ZK proof generation takes 30-60 seconds. Please don't close this tab." />
-            </div>
+              <button
+                onClick={handlePay}
+                disabled={sending || !connected || !publicKey}
+                className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-lg shadow-lg shadow-purple-900/20"
+              >
+                {sending ? (
+                  <>
+                    <Spinner />
+                    <span className="text-sm">Sending transaction...</span>
+                  </>
+                ) : (
+                  `Pay ${link.amountSol} ${link.token}`
+                )}
+              </button>
+              {sending && (
+                <div className="mt-3">
+                  <StatusMessage type="info" message="Confirm the transaction in your wallet. Do not close this tab." />
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

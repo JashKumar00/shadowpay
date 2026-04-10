@@ -14,3 +14,58 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Create a payment link
+ */
+export const CreateLinkBody = zod.object({
+  recipientAddress: zod.string(),
+  amountSol: zod.number(),
+  note: zod.string().nullish(),
+  token: zod.enum(["SOL", "USDC"]),
+});
+
+/**
+ * @summary Get a payment link by ID
+ */
+export const GetLinkParams = zod.object({
+  linkId: zod.coerce.string(),
+});
+
+export const GetLinkResponse = zod.object({
+  id: zod.string(),
+  recipientAddress: zod.string(),
+  amountSol: zod.number(),
+  note: zod.string().nullable(),
+  token: zod.string(),
+  paid: zod.boolean(),
+  txSignature: zod.string().nullable(),
+  payerAddress: zod.string().nullable(),
+  createdAt: zod.string(),
+  paidAt: zod.string().nullable(),
+});
+
+/**
+ * @summary Mark a payment link as paid
+ */
+export const MarkLinkPaidParams = zod.object({
+  linkId: zod.coerce.string(),
+});
+
+export const MarkLinkPaidBody = zod.object({
+  txSignature: zod.string(),
+  payerAddress: zod.string(),
+});
+
+export const MarkLinkPaidResponse = zod.object({
+  id: zod.string(),
+  recipientAddress: zod.string(),
+  amountSol: zod.number(),
+  note: zod.string().nullable(),
+  token: zod.string(),
+  paid: zod.boolean(),
+  txSignature: zod.string().nullable(),
+  payerAddress: zod.string().nullable(),
+  createdAt: zod.string(),
+  paidAt: zod.string().nullable(),
+});
