@@ -92,6 +92,10 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [sendingFunds, setSendingFunds] = useState(false);
   const [funded, setFunded] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  const [pendingLinkId, setPendingLinkId] = useState<string | null>(null);
+  const [pendingEscrowKey, setPendingEscrowKey] = useState<string | null>(null);
+  const [pendingAmount, setPendingAmount] = useState<number>(0);
   const [solBalance, setSolBalance] = useState<number | null>(null);
 
   const createLink = useCreateLink();
@@ -102,6 +106,51 @@ export default function HomePage() {
     connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
   }, [publicKey, connection]);
 
+  async function fundEscrow(linkId: string, escrowPublicKey: string, amountNum: number) {
+    if (!publicKey) return;
+    setSendingFunds(true);
+    setCancelled(false);
+    setError(null);
+    try {
+      const escrowPubkey = new PublicKey(escrowPublicKey);
+      const lamports = Math.round(amountNum * LAMPORTS_PER_SOL);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+      const transaction = buildMinFeeTx(
+        SystemProgram.transfer({ fromPubkey: publicKey, toPubkey: escrowPubkey, lamports })
+      );
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "processed",
+        maxRetries: 5,
+      });
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+      await markFunded.mutateAsync({ linkId, data: { txSignature: signature } });
+      setFunded(true);
+      setCancelled(false);
+      setError(null);
+      if (publicKey) connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
+    } catch (e: any) {
+      const isRejection =
+        e?.name === "WalletSignTransactionError" ||
+        e?.message?.toLowerCase().includes("rejected") ||
+        e?.message?.toLowerCase().includes("cancelled") ||
+        e?.message?.toLowerCase().includes("user rejected") ||
+        e?.code === 4001;
+      if (isRejection) {
+        setCancelled(true);
+        setError(null);
+      } else {
+        setError(e?.message || "Failed to fund escrow. Try again.");
+        setCancelled(false);
+      }
+    } finally {
+      setSendingFunds(false);
+    }
+  }
+
   async function handleGenerate() {
     if (!publicKey) { setError("Please connect your wallet first."); return; }
     const amountNum = parseFloat(amount);
@@ -109,6 +158,9 @@ export default function HomePage() {
     setError(null);
     setGeneratedLink(null);
     setFunded(false);
+    setCancelled(false);
+    setPendingLinkId(null);
+    setPendingEscrowKey(null);
 
     try {
       const result = await createLink.mutateAsync({
@@ -129,39 +181,19 @@ export default function HomePage() {
       setGeneratedLink(link);
 
       if (mode === "send" && result.escrowPublicKey) {
-        setSendingFunds(true);
-        try {
-          const escrowPubkey = new PublicKey(result.escrowPublicKey);
-          const lamports = Math.round(amountNum * LAMPORTS_PER_SOL);
-          const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
-          const transaction = buildMinFeeTx(
-            SystemProgram.transfer({ fromPubkey: publicKey, toPubkey: escrowPubkey, lamports })
-          );
-          transaction.recentBlockhash = blockhash;
-          transaction.feePayer = publicKey;
-
-          const signature = await sendTransaction(transaction, connection, {
-            skipPreflight: false,
-            preflightCommitment: "processed",
-            maxRetries: 5,
-          });
-          await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-          await markFunded.mutateAsync({ linkId: result.id, data: { txSignature: signature } });
-          setFunded(true);
-          if (publicKey) connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
-        } catch (e: any) {
-          if (e?.name === "WalletSignTransactionError" || e?.message?.includes("rejected")) {
-            setError("Transaction rejected. The link was created but not funded.");
-          } else {
-            setError(e?.message || "Failed to fund escrow. Link created but not funded.");
-          }
-        } finally {
-          setSendingFunds(false);
-        }
+        setPendingLinkId(result.id);
+        setPendingEscrowKey(result.escrowPublicKey);
+        setPendingAmount(amountNum);
+        await fundEscrow(result.id, result.escrowPublicKey, amountNum);
       }
     } catch (e: any) {
       setError(e?.data?.error || e?.message || "Something went wrong. Please try again.");
     }
+  }
+
+  async function handleRetryFunding() {
+    if (!pendingLinkId || !pendingEscrowKey) return;
+    await fundEscrow(pendingLinkId, pendingEscrowKey, pendingAmount);
   }
 
   async function handleCopy() {
@@ -224,7 +256,7 @@ export default function HomePage() {
             {(["send", "receive"] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => { setMode(m); setGeneratedLink(null); setError(null); setFunded(false); }}
+                onClick={() => { setMode(m); setGeneratedLink(null); setError(null); setFunded(false); setCancelled(false); }}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-black transition-all flex items-center justify-center gap-2 ${
                   mode === m
                     ? "text-white"
@@ -417,64 +449,109 @@ export default function HomePage() {
             </div>
           </div>
 
-          {generatedLink && (
-            <div className={`mt-4 rounded-2xl overflow-hidden animate-fade-up`}
-              style={mode === "send" && !funded ? {
-                background: "rgba(245,158,11,0.06)",
-                border: "1px solid rgba(245,158,11,0.2)",
-              } : {
-                background: "rgba(34,197,94,0.06)",
-                border: "1px solid rgba(34,197,94,0.2)",
-              }}>
-              <div className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b ${
-                mode === "send" && !funded
-                  ? "text-amber-400 border-amber-500/12"
-                  : "text-green-400 border-green-500/12"
-              }`}>
-                {mode === "send" && !funded ? (
-                  <><Spinner />Confirming on Solana...</>
-                ) : (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    {mode === "send" ? "Escrow funded · Link ready!" : "Payment request ready!"}
-                  </>
-                )}
-              </div>
-              <div className="p-4 space-y-3">
-                <div className="rounded-xl px-3 py-3 font-mono text-xs break-all leading-relaxed select-all"
-                  style={{
-                    background: "rgba(0,0,0,0.35)",
-                    color: mode === "send" && !funded ? "#fbbf24" : "#4ade80",
-                  }}>
-                  {generatedLink}
-                </div>
-                <button
-                  onClick={handleCopy}
-                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 text-white ${
-                    mode === "send" && !funded
-                      ? "bg-amber-700/60 hover:bg-amber-600/70"
-                      : "bg-green-700/60 hover:bg-green-600/70"
-                  }`}
-                >
-                  {copied ? (
+          {generatedLink && (() => {
+            const isCancelledSend = mode === "send" && cancelled && !funded;
+            const isConfirmingSend = mode === "send" && sendingFunds && !funded && !cancelled;
+            const isReady = funded || mode === "receive";
+            const cardStyle = isCancelledSend
+              ? { background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }
+              : isReady
+              ? { background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }
+              : { background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" };
+
+            return (
+              <div className="mt-4 rounded-2xl overflow-hidden animate-fade-up" style={cardStyle}>
+                <div className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b ${
+                  isCancelledSend
+                    ? "text-red-400 border-red-500/12"
+                    : isConfirmingSend
+                    ? "text-amber-400 border-amber-500/12"
+                    : "text-green-400 border-green-500/12"
+                }`}>
+                  {isCancelledSend ? (
                     <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      Copied!
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                      </svg>
+                      Transaction cancelled — link not funded
                     </>
+                  ) : isConfirmingSend ? (
+                    <><Spinner />Confirming on Solana...</>
                   ) : (
                     <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"/>
                       </svg>
-                      Copy Link
+                      {mode === "send" ? "Escrow funded · Link ready!" : "Payment request ready!"}
                     </>
                   )}
-                </button>
+                </div>
+                <div className="p-4 space-y-3">
+                  {isCancelledSend && (
+                    <p className="text-xs text-red-300/70 leading-relaxed">
+                      Your wallet cancelled the transaction. The link was created but has no funds. Retry below to fund it, or start fresh.
+                    </p>
+                  )}
+                  <div className="rounded-xl px-3 py-3 font-mono text-xs break-all leading-relaxed select-all"
+                    style={{
+                      background: "rgba(0,0,0,0.35)",
+                      color: isCancelledSend ? "#f87171" : isConfirmingSend ? "#fbbf24" : "#4ade80",
+                      opacity: isCancelledSend ? 0.6 : 1,
+                    }}>
+                    {generatedLink}
+                  </div>
+                  {isCancelledSend ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleRetryFunding}
+                        disabled={sendingFunds}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 text-white disabled:opacity-40"
+                        style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", boxShadow: "0 0 16px rgba(124,58,237,0.35)" }}
+                      >
+                        {sendingFunds ? <><Spinner />Retrying...</> : (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Retry Funding
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => { setGeneratedLink(null); setCancelled(false); setError(null); }}
+                        className="px-4 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:text-gray-300 transition-colors"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                      >
+                        Start over
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleCopy}
+                      disabled={isConfirmingSend}
+                      className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 text-white disabled:opacity-40 ${
+                        isConfirmingSend
+                          ? "bg-amber-700/60"
+                          : "bg-green-700/60 hover:bg-green-600/70"
+                      }`}
+                    >
+                      {copied ? (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                          </svg>
+                          {isConfirmingSend ? "Waiting for confirmation..." : "Copy Link"}
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         <div className="mt-10 grid grid-cols-3 gap-4 w-full max-w-md animate-fade-up" style={{ animationDelay: "0.2s" }}>
