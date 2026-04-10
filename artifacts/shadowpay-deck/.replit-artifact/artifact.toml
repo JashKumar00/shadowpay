@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/shadowpay-deck/"
+title = "ShadowPay Pitch Deck"
+version = "1.0.0"
+id = "artifacts/shadowpay-deck"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/shadowpay-deck/" ]
+localPort = 23647
+
+[services.development]
+run = "pnpm --filter @workspace/shadowpay-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/shadowpay-deck", "run", "build" ]
+publicDir = "artifacts/shadowpay-deck/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23647"
+BASE_PATH = "/shadowpay-deck/"
