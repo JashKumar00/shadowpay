@@ -16,6 +16,25 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+### ShadowPay (`artifacts/shadowpay`)
+- **Type**: react-vite
+- **Preview path**: `/`
+- **Purpose**: Private payment links app on Solana using Umbra Privacy SDK
+- **Features**:
+  - Home page: Create private payment links (USDC on Solana devnet)
+  - Pay page (`/pay/:linkId`): Sender pays via link using ZK mixer
+  - Claim page (`/claim`): Recipient scans and claims private UTXOs
+- **Key packages**: `@umbra-privacy/sdk`, `@umbra-privacy/web-zk-prover`, `@wallet-standard/app`, `nanoid`, `snarkjs`
+- **Storage**: Payment links stored in localStorage (client-side only)
+- **Network**: Solana devnet by default (configurable via VITE_RPC_URL env)
+
+### API Server (`artifacts/api-server`)
+- **Type**: Express API
+- **Preview path**: `/api`
+- **Purpose**: Backend API server (health check, extensible)
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
