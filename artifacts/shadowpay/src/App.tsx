@@ -10,11 +10,9 @@ import {
   SolflareWalletAdapter,
   BitgetWalletAdapter,
   TrustWalletAdapter,
-  LedgerWalletAdapter,
-  NightlyWalletAdapter,
-  Coin98WalletAdapter,
-  TorusWalletAdapter,
   CoinbaseWalletAdapter,
+  Coin98WalletAdapter,
+  NightlyWalletAdapter,
   TokenPocketWalletAdapter,
   SafePalWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
@@ -52,23 +50,31 @@ function Router() {
   );
 }
 
+function buildAdapters() {
+  const safe = [];
+  const attempts = [
+    () => new PhantomWalletAdapter(),
+    () => new SolflareWalletAdapter(),
+    () => new BitgetWalletAdapter(),
+    () => new TrustWalletAdapter(),
+    () => new CoinbaseWalletAdapter(),
+    () => new Coin98WalletAdapter(),
+    () => new NightlyWalletAdapter(),
+    () => new TokenPocketWalletAdapter(),
+    () => new SafePalWalletAdapter(),
+  ];
+  for (const make of attempts) {
+    try {
+      safe.push(make());
+    } catch {
+      /* skip adapters that fail to initialize */
+    }
+  }
+  return safe;
+}
+
 function App() {
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new BitgetWalletAdapter(),
-      new TrustWalletAdapter(),
-      new CoinbaseWalletAdapter(),
-      new Coin98WalletAdapter(),
-      new LedgerWalletAdapter(),
-      new NightlyWalletAdapter(),
-      new TorusWalletAdapter(),
-      new TokenPocketWalletAdapter(),
-      new SafePalWalletAdapter(),
-    ],
-    []
-  );
+  const wallets = useMemo(() => buildAdapters(), []);
 
   return (
     <QueryClientProvider client={queryClient}>
