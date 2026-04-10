@@ -15,15 +15,17 @@ export function Header({ showClaimLink = false }: HeaderProps) {
         onClick={() => navigate("/")}
         className="flex items-center gap-2.5 group cursor-pointer"
       >
-        <div className="relative w-8 h-8 shrink-0">
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 group-hover:from-violet-400 group-hover:to-purple-600 transition-all duration-300" />
-          <div className="absolute inset-0 rounded-xl flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" strokeLinejoin="round" />
-            </svg>
-          </div>
+        <div className="relative w-9 h-9 shrink-0">
+          <div className="absolute inset-0 rounded-xl transition-all duration-300"
+            style={{ background: "rgba(124,58,237,0.18)", border: "1px solid rgba(124,58,237,0.35)" }} />
           <div className="absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"
-            style={{ background: "rgba(124,58,237,0.6)" }} />
+            style={{ background: "rgba(124,58,237,0.5)" }} />
+          <img
+            src="/logo-nobg.png"
+            alt="ShadowPay"
+            className="absolute inset-0 w-full h-full object-contain rounded-xl p-0.5"
+            style={{ filter: "brightness(0) invert(1) opacity(0.85)" }}
+          />
         </div>
         <span className="text-base font-black text-white tracking-tight group-hover:text-violet-200 transition-colors">
           ShadowPay
