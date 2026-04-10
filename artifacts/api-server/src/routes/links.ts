@@ -242,15 +242,31 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       return;
     }
 
-    // signature fee (5000) + priority fee: 2000 CU × 50000 µL / 1_000_000 = 100 L → use 5200 for safety
-    const feeEstimate = 5200;
-    const transferAmount = escrowBalance - feeEstimate;
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+
+    // Build a dummy transaction with placeholder lamports=1 so we can measure the exact fee
+    const dummyTx = new Transaction({
+      recentBlockhash: blockhash,
+      feePayer: escrowKeypair.publicKey,
+    }).add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
+      SystemProgram.transfer({
+        fromPubkey: escrowKeypair.publicKey,
+        toPubkey: claimantPubkey,
+        lamports: 1,
+      })
+    );
+    const feeResponse = await connection.getFeeForMessage(dummyTx.compileMessage(), "confirmed");
+    const exactFee = feeResponse.value ?? 5100; // fallback to 5100 (5000 sig + 100 priority)
+
+    // Transfer exactly (balance − exactFee) so the escrow ends at 0 (clean account close)
+    const transferAmount = escrowBalance - exactFee;
     if (transferAmount <= 0) {
       res.status(400).json({ error: "Escrow balance too low to cover fees" });
       return;
     }
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
     const transaction = new Transaction({
       recentBlockhash: blockhash,
       feePayer: escrowKeypair.publicKey,
