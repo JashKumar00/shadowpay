@@ -5,15 +5,22 @@ import {
   ConnectionProvider,
   WalletProvider,
 } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
+  BitgetWalletAdapter,
+  TrustWalletAdapter,
+  LedgerWalletAdapter,
+  NightlyWalletAdapter,
+  Coin98WalletAdapter,
   TorusWalletAdapter,
   CoinbaseWalletAdapter,
+  TokenPocketWalletAdapter,
+  SafePalWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
+import { WalletModalProvider } from "@/components/WalletModalProvider";
 import HomePage from "@/pages/HomePage";
 import PayPage from "@/pages/PayPage";
 import ClaimPage from "@/pages/ClaimPage";
@@ -50,8 +57,15 @@ function App() {
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-      new TorusWalletAdapter(),
+      new BitgetWalletAdapter(),
+      new TrustWalletAdapter(),
       new CoinbaseWalletAdapter(),
+      new Coin98WalletAdapter(),
+      new LedgerWalletAdapter(),
+      new NightlyWalletAdapter(),
+      new TorusWalletAdapter(),
+      new TokenPocketWalletAdapter(),
+      new SafePalWalletAdapter(),
     ],
     []
   );

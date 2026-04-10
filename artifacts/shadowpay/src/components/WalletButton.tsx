@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useWalletModal } from "./WalletModalProvider";
 
 function shorten(address: string) {
   return address.slice(0, 4) + ".." + address.slice(-4);
