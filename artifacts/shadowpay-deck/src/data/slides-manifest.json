@@ -1,58 +1,58 @@
 [
-  {
-    "id": "a1b2c3d4-0001-4000-8000-000000000001",
-    "position": 1,
-    "filepath": "src/pages/slides/Slide1Title.tsx",
-    "title": "Title — ShadowPay",
-    "description": "Hero slide with the shadow figure image and ShadowPay brand",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-0002-4000-8000-000000000002",
-    "position": 2,
-    "filepath": "src/pages/slides/Slide2Problem.tsx",
-    "title": "The Problem",
-    "description": "Side-by-side comparison of wallet address exposure with vs without ShadowPay",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-0003-4000-8000-000000000003",
-    "position": 3,
-    "filepath": "src/pages/slides/Slide3HowItWorks.tsx",
-    "title": "How It Works",
-    "description": "Three-step stealth payment flow: Generate → Share → Claim",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-0004-4000-8000-000000000004",
-    "position": 4,
-    "filepath": "src/pages/slides/Slide4StealthTech.tsx",
-    "title": "Stealth Address Technology",
-    "description": "Technical explanation of the stealth address derivation and on-chain trail",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-0005-4000-8000-000000000005",
-    "position": 5,
-    "filepath": "src/pages/slides/Slide5UseCases.tsx",
-    "title": "Use Cases",
-    "description": "Payment Links and Private Gift Cards — two core product flows",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-0006-4000-8000-000000000006",
-    "position": 6,
-    "filepath": "src/pages/slides/Slide6WhySolana.tsx",
-    "title": "Why Solana",
-    "description": "400ms, $0.001 fee, SOL + USDC non-custodial stats slide",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-0007-4000-8000-000000000007",
-    "position": 7,
-    "filepath": "src/pages/slides/Slide7Closing.tsx",
-    "title": "Closing — Pay in Shadow",
-    "description": "Closing slide with shadow figure, tagline, and site URL",
-    "speakerNotes": ""
-  }
+	{
+		"id": "a1b2c3d4-0001-4000-8000-000000000001",
+		"position": 1,
+		"filepath": "src/pages/slides/Slide1Title.tsx",
+		"title": "Title — ShadowPay",
+		"description": "Hero slide with the shadow figure image and ShadowPay brand",
+		"speakerNotes": ""
+	},
+	{
+		"id": "a1b2c3d4-0002-4000-8000-000000000002",
+		"position": 2,
+		"filepath": "src/pages/slides/Slide2Problem.tsx",
+		"title": "The Problem",
+		"description": "Side-by-side comparison of wallet address exposure with vs without ShadowPay",
+		"speakerNotes": ""
+	},
+	{
+		"id": "a1b2c3d4-0003-4000-8000-000000000003",
+		"position": 3,
+		"filepath": "src/pages/slides/Slide3HowItWorks.tsx",
+		"title": "How It Works",
+		"description": "Three-step stealth payment flow: Generate → Share → Claim",
+		"speakerNotes": ""
+	},
+	{
+		"id": "a1b2c3d4-0004-4000-8000-000000000004",
+		"position": 4,
+		"filepath": "src/pages/slides/Slide4StealthTech.tsx",
+		"title": "Stealth Address Technology",
+		"description": "Technical explanation of the stealth address derivation and on-chain trail",
+		"speakerNotes": ""
+	},
+	{
+		"id": "a1b2c3d4-0005-4000-8000-000000000005",
+		"position": 5,
+		"filepath": "src/pages/slides/Slide5UseCases.tsx",
+		"title": "Use Cases",
+		"description": "Payment Links and Private Gift Cards — two core product flows",
+		"speakerNotes": ""
+	},
+	{
+		"id": "a1b2c3d4-0006-4000-8000-000000000006",
+		"position": 6,
+		"filepath": "src/pages/slides/Slide6WhySolana.tsx",
+		"title": "Why Solana",
+		"description": "400ms, $0.001 fee, SOL + USDC non-custodial stats slide",
+		"speakerNotes": ""
+	},
+	{
+		"id": "a1b2c3d4-0007-4000-8000-000000000007",
+		"position": 7,
+		"filepath": "src/pages/slides/Slide7Closing.tsx",
+		"title": "Closing — Pay in Shadow",
+		"description": "Closing slide with shadow figure, tagline, and site URL",
+		"speakerNotes": ""
+	}
 ]
