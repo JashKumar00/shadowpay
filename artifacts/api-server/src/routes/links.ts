@@ -8,6 +8,7 @@ import {
   Transaction,
   LAMPORTS_PER_SOL,
   PublicKey,
+  ComputeBudgetProgram,
 } from "@solana/web3.js";
 import { db, paymentLinksTable } from "@workspace/db";
 import {
@@ -248,6 +249,8 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       recentBlockhash: blockhash,
       feePayer: escrowKeypair.publicKey,
     }).add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 300 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 0 }),
       SystemProgram.transfer({
         fromPubkey: escrowKeypair.publicKey,
         toPubkey: claimantPubkey,

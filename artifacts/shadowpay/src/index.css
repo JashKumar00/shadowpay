@@ -276,6 +276,121 @@
   }
 }
 
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -60px) scale(1.08); }
+  66% { transform: translate(-30px, 40px) scale(0.94); }
+}
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-50px, 30px) scale(1.1); }
+  66% { transform: translate(35px, -50px) scale(0.92); }
+}
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25px, 55px) scale(1.05); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes ticker-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes border-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(124,58,237,0.3), inset 0 0 8px rgba(124,58,237,0.05); }
+  50% { box-shadow: 0 0 20px rgba(124,58,237,0.6), inset 0 0 12px rgba(124,58,237,0.1); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-orb-1 { animation: orb-float-1 18s ease-in-out infinite; }
+.animate-orb-2 { animation: orb-float-2 22s ease-in-out infinite; }
+.animate-orb-3 { animation: orb-float-3 26s ease-in-out infinite; }
+.animate-glow { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-fade-up { animation: fade-up 0.4s ease-out forwards; }
+.animate-border-glow { animation: border-glow 3s ease-in-out infinite; }
+
+.glass-card {
+  background: rgba(255,255,255,0.035);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.glass-card-purple {
+  background: rgba(124,58,237,0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(124,58,237,0.2);
+}
+.neon-text-purple {
+  text-shadow: 0 0 20px rgba(167,139,250,0.5);
+}
+.neon-text-green {
+  text-shadow: 0 0 20px rgba(74,222,128,0.5);
+}
+.btn-glow-purple {
+  box-shadow: 0 0 20px rgba(124,58,237,0.4), 0 4px 15px rgba(0,0,0,0.3);
+}
+.btn-glow-purple:hover {
+  box-shadow: 0 0 30px rgba(124,58,237,0.6), 0 4px 20px rgba(0,0,0,0.4);
+}
+.btn-glow-green {
+  box-shadow: 0 0 20px rgba(34,197,94,0.4), 0 4px 15px rgba(0,0,0,0.3);
+}
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #a78bfa 0%, #e879f9 25%, #38bdf8 50%, #e879f9 75%, #a78bfa 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Solana wallet adapter overrides */
+.wallet-adapter-button {
+  background: rgba(124,58,237,0.85) !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  height: auto !important;
+  font-weight: 600 !important;
+  transition: all 0.2s !important;
+}
+.wallet-adapter-button:hover {
+  background: rgba(139,92,246,0.95) !important;
+  box-shadow: 0 0 20px rgba(124,58,237,0.5) !important;
+}
+.wallet-adapter-modal-wrapper {
+  background: #0d0d16 !important;
+  border: 1px solid rgba(124,58,237,0.3) !important;
+}
+.wallet-adapter-modal-title {
+  color: white !important;
+}
+.wallet-adapter-modal-list .wallet-adapter-button {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+.wallet-adapter-modal-list .wallet-adapter-button:hover {
+  background: rgba(124,58,237,0.2) !important;
+}
+
 /**
  * Using the elevate system.
  * Automatic contrast adjustment.
