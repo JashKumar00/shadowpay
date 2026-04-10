@@ -11,8 +11,8 @@ const EXPLORER_BASE = "https://explorer.solana.com/tx";
 
 function buildMinFeeTx(...instructions: any[]) {
   return new Transaction().add(
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 300 }),
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 0 }),
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
     ...instructions
   );
 }
@@ -226,7 +226,7 @@ export default function PayPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 text-xs">Fee</span>
-                <span className="text-gray-400 text-xs">~0.000005 SOL</span>
+                <span className="text-gray-400 text-xs">~0.0000051 SOL</span>
               </div>
             </div>
           </div>

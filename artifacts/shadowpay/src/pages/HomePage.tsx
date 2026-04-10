@@ -17,8 +17,8 @@ type Mode = "send" | "receive";
 
 function buildMinFeeTx(...instructions: any[]) {
   return new Transaction().add(
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 300 }),
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 0 }),
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
     ...instructions
   );
 }
@@ -116,7 +116,7 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5 text-xs font-medium text-green-300"
             style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Live · Solana Mainnet · ~$0.0005 per tx
+            Live · Solana Mainnet · ~$0.001 per tx
           </div>
           <h1 className="text-5xl font-black mb-3 leading-[1.1] tracking-tight">
             Private{" "}
@@ -223,7 +223,7 @@ export default function HomePage() {
                 </div>
                 {amount && !isNaN(parseFloat(amount)) && (
                   <div className="text-xs text-gray-600 mt-1 pl-1">
-                    Fee: ≈0.000005 SOL · Total: {(parseFloat(amount) + 0.000005).toFixed(6)} SOL
+                    Fee: ≈0.0000051 SOL · Total: {(parseFloat(amount) + 0.0000051).toFixed(7)} SOL
                   </div>
                 )}
               </div>

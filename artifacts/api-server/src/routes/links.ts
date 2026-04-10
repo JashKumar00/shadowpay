@@ -249,8 +249,8 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       recentBlockhash: blockhash,
       feePayer: escrowKeypair.publicKey,
     }).add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 300 }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 0 }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
       SystemProgram.transfer({
         fromPubkey: escrowKeypair.publicKey,
         toPubkey: claimantPubkey,
