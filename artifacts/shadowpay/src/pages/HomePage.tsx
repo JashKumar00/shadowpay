@@ -97,6 +97,7 @@ export default function HomePage() {
   const [pendingEscrowKey, setPendingEscrowKey] = useState<string | null>(null);
   const [pendingAmount, setPendingAmount] = useState<number>(0);
   const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [sendStatus, setSendStatus] = useState<string>("");
 
   const createLink = useCreateLink();
   const markFunded = useMarkLinkFunded();
@@ -111,44 +112,78 @@ export default function HomePage() {
     setSendingFunds(true);
     setCancelled(false);
     setError(null);
-    try {
-      const escrowPubkey = new PublicKey(escrowPublicKey);
-      const lamports = Math.round(amountNum * LAMPORTS_PER_SOL);
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
-      const transaction = buildMinFeeTx(
-        SystemProgram.transfer({ fromPubkey: publicKey, toPubkey: escrowPubkey, lamports })
-      );
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
+    setSendStatus("Building transaction…");
 
-      const signature = await sendTransaction(transaction, connection, {
-        skipPreflight: false,
-        preflightCommitment: "processed",
-        maxRetries: 5,
-      });
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-      await markFunded.mutateAsync({ linkId, data: { txSignature: signature } });
-      setFunded(true);
-      setCancelled(false);
-      setError(null);
-      if (publicKey) connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
-    } catch (e: any) {
-      const isRejection =
-        e?.name === "WalletSignTransactionError" ||
-        e?.message?.toLowerCase().includes("rejected") ||
-        e?.message?.toLowerCase().includes("cancelled") ||
-        e?.message?.toLowerCase().includes("user rejected") ||
-        e?.code === 4001;
-      if (isRejection) {
-        setCancelled(true);
-        setError(null);
-      } else {
-        setError(e?.message || "Failed to fund escrow. Try again.");
+    const MAX_ATTEMPTS = 3;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const escrowPubkey = new PublicKey(escrowPublicKey);
+        const lamports = Math.round(amountNum * LAMPORTS_PER_SOL);
+
+        setSendStatus(attempt > 1 ? `Retrying (${attempt}/${MAX_ATTEMPTS})…` : "Fetching latest block…");
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+
+        const transaction = buildMinFeeTx(
+          SystemProgram.transfer({ fromPubkey: publicKey, toPubkey: escrowPubkey, lamports })
+        );
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = publicKey;
+
+        setSendStatus("Approve in your wallet…");
+        const signature = await sendTransaction(transaction, connection, {
+          skipPreflight: true,
+          maxRetries: 3,
+        });
+
+        setSendStatus("Confirming on Solana…");
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+
+        setSendStatus("Confirmed! Marking link ready…");
+        await markFunded.mutateAsync({ linkId, data: { txSignature: signature } });
+        setFunded(true);
         setCancelled(false);
+        setError(null);
+        setSendStatus("");
+        if (publicKey) connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
+        return;
+      } catch (e: any) {
+        const msg: string = e?.message || "";
+        const isExpiry =
+          msg.toLowerCase().includes("block height exceeded") ||
+          msg.toLowerCase().includes("blockhash not found") ||
+          msg.toLowerCase().includes("expired");
+        const isRejection =
+          e?.name === "WalletSignTransactionError" ||
+          msg.toLowerCase().includes("rejected") ||
+          msg.toLowerCase().includes("cancelled") ||
+          msg.toLowerCase().includes("user rejected") ||
+          e?.code === 4001;
+
+        if (isRejection) {
+          setCancelled(true);
+          setError(null);
+          setSendStatus("");
+          setSendingFunds(false);
+          return;
+        }
+
+        if (isExpiry && attempt < MAX_ATTEMPTS) {
+          setSendStatus(`Block expired — retrying (${attempt + 1}/${MAX_ATTEMPTS})…`);
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+
+        setError(msg || "Failed to fund escrow. Try again.");
+        setCancelled(false);
+        setSendStatus("");
+        setSendingFunds(false);
+        return;
       }
-    } finally {
-      setSendingFunds(false);
     }
+
+    setSendingFunds(false);
+    setSendStatus("");
   }
 
   async function handleGenerate() {
@@ -421,7 +456,7 @@ export default function HomePage() {
                 {isPending ? (
                   <>
                     <Spinner />
-                    <span>{createLink.isPending ? "Creating link..." : "Funding escrow on-chain..."}</span>
+                    <span>{createLink.isPending ? "Creating link…" : (sendStatus || "Funding escrow…")}</span>
                   </>
                 ) : !connected ? (
                   <>
@@ -476,7 +511,7 @@ export default function HomePage() {
                       Transaction cancelled — link not funded
                     </>
                   ) : isConfirmingSend ? (
-                    <><Spinner />Confirming on Solana...</>
+                    <><Spinner />{sendStatus || "Confirming on Solana…"}</>
                   ) : (
                     <>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

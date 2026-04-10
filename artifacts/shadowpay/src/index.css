@@ -303,7 +303,7 @@
   100% { transform: translateX(-50%); }
 }
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes border-glow {
@@ -319,7 +319,7 @@
 .animate-orb-2 { animation: orb-float-2 22s ease-in-out infinite; }
 .animate-orb-3 { animation: orb-float-3 26s ease-in-out infinite; }
 .animate-glow { animation: glow-pulse 2s ease-in-out infinite; }
-.animate-fade-up { animation: fade-up 0.4s ease-out forwards; }
+.animate-fade-up { animation: fade-up 0.3s cubic-bezier(0.22,1,0.36,1) forwards; will-change: transform, opacity; }
 .animate-border-glow { animation: border-glow 3s ease-in-out infinite; }
 
 .glass-card {
