@@ -8,7 +8,6 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -19,7 +18,8 @@ export const HealthCheckResponse = zod.object({
  * @summary Create a payment link
  */
 export const CreateLinkBody = zod.object({
-  recipientAddress: zod.string(),
+  type: zod.enum(["send", "receive"]),
+  recipientAddress: zod.string().nullish(),
   amountSol: zod.number(),
   note: zod.string().nullish(),
   token: zod.enum(["SOL", "USDC"]),
@@ -34,19 +34,24 @@ export const GetLinkParams = zod.object({
 
 export const GetLinkResponse = zod.object({
   id: zod.string(),
-  recipientAddress: zod.string(),
+  type: zod.string(),
+  recipientAddress: zod.string().nullable(),
   amountSol: zod.number(),
   note: zod.string().nullable(),
   token: zod.string(),
+  escrowPublicKey: zod.string().nullable(),
+  funded: zod.boolean(),
+  fundedTxSignature: zod.string().nullable(),
   paid: zod.boolean(),
   txSignature: zod.string().nullable(),
   payerAddress: zod.string().nullable(),
+  claimantAddress: zod.string().nullable(),
   createdAt: zod.string(),
   paidAt: zod.string().nullable(),
 });
 
 /**
- * @summary Mark a payment link as paid
+ * @summary Mark a receive-type link as paid
  */
 export const MarkLinkPaidParams = zod.object({
   linkId: zod.coerce.string(),
@@ -59,13 +64,64 @@ export const MarkLinkPaidBody = zod.object({
 
 export const MarkLinkPaidResponse = zod.object({
   id: zod.string(),
-  recipientAddress: zod.string(),
+  type: zod.string(),
+  recipientAddress: zod.string().nullable(),
   amountSol: zod.number(),
   note: zod.string().nullable(),
   token: zod.string(),
+  escrowPublicKey: zod.string().nullable(),
+  funded: zod.boolean(),
+  fundedTxSignature: zod.string().nullable(),
   paid: zod.boolean(),
   txSignature: zod.string().nullable(),
   payerAddress: zod.string().nullable(),
+  claimantAddress: zod.string().nullable(),
   createdAt: zod.string(),
   paidAt: zod.string().nullable(),
+});
+
+/**
+ * @summary Mark a send-type link as funded with escrow tx
+ */
+export const MarkLinkFundedParams = zod.object({
+  linkId: zod.coerce.string(),
+});
+
+export const MarkLinkFundedBody = zod.object({
+  txSignature: zod.string(),
+});
+
+export const MarkLinkFundedResponse = zod.object({
+  id: zod.string(),
+  type: zod.string(),
+  recipientAddress: zod.string().nullable(),
+  amountSol: zod.number(),
+  note: zod.string().nullable(),
+  token: zod.string(),
+  escrowPublicKey: zod.string().nullable(),
+  funded: zod.boolean(),
+  fundedTxSignature: zod.string().nullable(),
+  paid: zod.boolean(),
+  txSignature: zod.string().nullable(),
+  payerAddress: zod.string().nullable(),
+  claimantAddress: zod.string().nullable(),
+  createdAt: zod.string(),
+  paidAt: zod.string().nullable(),
+});
+
+/**
+ * @summary Claim a send-type link - server sends from escrow to claimant
+ */
+export const ClaimLinkParams = zod.object({
+  linkId: zod.coerce.string(),
+});
+
+export const ClaimLinkBody = zod.object({
+  claimantAddress: zod.string(),
+});
+
+export const ClaimLinkResponse = zod.object({
+  txSignature: zod.string(),
+  claimantAddress: zod.string(),
+  amountSol: zod.number(),
 });

@@ -6,9 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./claimLinkBody";
+export * from "./claimLinkResponse";
 export * from "./createLinkBody";
 export * from "./createLinkBodyToken";
+export * from "./createLinkBodyType";
 export * from "./errorResponse";
 export * from "./healthStatus";
+export * from "./markLinkFundedBody";
 export * from "./markLinkPaidBody";
 export * from "./paymentLink";

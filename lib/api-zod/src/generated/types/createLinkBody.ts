@@ -6,9 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateLinkBodyToken } from "./createLinkBodyToken";
+import type { CreateLinkBodyType } from "./createLinkBodyType";
 
 export interface CreateLinkBody {
-  recipientAddress: string;
+  type: CreateLinkBodyType;
+  /** @nullable */
+  recipientAddress?: string | null;
   amountSol: number;
   /** @nullable */
   note?: string | null;

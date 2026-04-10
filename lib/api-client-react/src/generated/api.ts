@@ -17,9 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ClaimLinkBody,
+  ClaimLinkResponse,
   CreateLinkBody,
   ErrorResponse,
   HealthStatus,
+  MarkLinkFundedBody,
   MarkLinkPaidBody,
   PaymentLink,
 } from "./api.schemas";
@@ -34,7 +37,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -273,7 +275,7 @@ export function useGetLink<
 }
 
 /**
- * @summary Mark a payment link as paid
+ * @summary Mark a receive-type link as paid
  */
 export const getMarkLinkPaidUrl = (linkId: string) => {
   return `/api/links/${linkId}/pay`;
@@ -337,7 +339,7 @@ export type MarkLinkPaidMutationBody = BodyType<MarkLinkPaidBody>;
 export type MarkLinkPaidMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Mark a payment link as paid
+ * @summary Mark a receive-type link as paid
  */
 export const useMarkLinkPaid = <
   TError = ErrorType<ErrorResponse>,
@@ -357,4 +359,178 @@ export const useMarkLinkPaid = <
   TContext
 > => {
   return useMutation(getMarkLinkPaidMutationOptions(options));
+};
+
+/**
+ * @summary Mark a send-type link as funded with escrow tx
+ */
+export const getMarkLinkFundedUrl = (linkId: string) => {
+  return `/api/links/${linkId}/fund`;
+};
+
+export const markLinkFunded = async (
+  linkId: string,
+  markLinkFundedBody: MarkLinkFundedBody,
+  options?: RequestInit,
+): Promise<PaymentLink> => {
+  return customFetch<PaymentLink>(getMarkLinkFundedUrl(linkId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(markLinkFundedBody),
+  });
+};
+
+export const getMarkLinkFundedMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markLinkFunded>>,
+    TError,
+    { linkId: string; data: BodyType<MarkLinkFundedBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markLinkFunded>>,
+  TError,
+  { linkId: string; data: BodyType<MarkLinkFundedBody> },
+  TContext
+> => {
+  const mutationKey = ["markLinkFunded"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markLinkFunded>>,
+    { linkId: string; data: BodyType<MarkLinkFundedBody> }
+  > = (props) => {
+    const { linkId, data } = props ?? {};
+
+    return markLinkFunded(linkId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkLinkFundedMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markLinkFunded>>
+>;
+export type MarkLinkFundedMutationBody = BodyType<MarkLinkFundedBody>;
+export type MarkLinkFundedMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a send-type link as funded with escrow tx
+ */
+export const useMarkLinkFunded = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markLinkFunded>>,
+    TError,
+    { linkId: string; data: BodyType<MarkLinkFundedBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markLinkFunded>>,
+  TError,
+  { linkId: string; data: BodyType<MarkLinkFundedBody> },
+  TContext
+> => {
+  return useMutation(getMarkLinkFundedMutationOptions(options));
+};
+
+/**
+ * @summary Claim a send-type link - server sends from escrow to claimant
+ */
+export const getClaimLinkUrl = (linkId: string) => {
+  return `/api/links/${linkId}/claim`;
+};
+
+export const claimLink = async (
+  linkId: string,
+  claimLinkBody: ClaimLinkBody,
+  options?: RequestInit,
+): Promise<ClaimLinkResponse> => {
+  return customFetch<ClaimLinkResponse>(getClaimLinkUrl(linkId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(claimLinkBody),
+  });
+};
+
+export const getClaimLinkMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof claimLink>>,
+    TError,
+    { linkId: string; data: BodyType<ClaimLinkBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof claimLink>>,
+  TError,
+  { linkId: string; data: BodyType<ClaimLinkBody> },
+  TContext
+> => {
+  const mutationKey = ["claimLink"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof claimLink>>,
+    { linkId: string; data: BodyType<ClaimLinkBody> }
+  > = (props) => {
+    const { linkId, data } = props ?? {};
+
+    return claimLink(linkId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClaimLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof claimLink>>
+>;
+export type ClaimLinkMutationBody = BodyType<ClaimLinkBody>;
+export type ClaimLinkMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Claim a send-type link - server sends from escrow to claimant
+ */
+export const useClaimLink = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof claimLink>>,
+    TError,
+    { linkId: string; data: BodyType<ClaimLinkBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof claimLink>>,
+  TError,
+  { linkId: string; data: BodyType<ClaimLinkBody> },
+  TContext
+> => {
+  return useMutation(getClaimLinkMutationOptions(options));
 };

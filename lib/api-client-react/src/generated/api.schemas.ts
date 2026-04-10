@@ -9,6 +9,14 @@ export interface HealthStatus {
   status: string;
 }
 
+export type CreateLinkBodyType =
+  (typeof CreateLinkBodyType)[keyof typeof CreateLinkBodyType];
+
+export const CreateLinkBodyType = {
+  send: "send",
+  receive: "receive",
+} as const;
+
 export type CreateLinkBodyToken =
   (typeof CreateLinkBodyToken)[keyof typeof CreateLinkBodyToken];
 
@@ -18,7 +26,9 @@ export const CreateLinkBodyToken = {
 } as const;
 
 export interface CreateLinkBody {
-  recipientAddress: string;
+  type: CreateLinkBodyType;
+  /** @nullable */
+  recipientAddress?: string | null;
   amountSol: number;
   /** @nullable */
   note?: string | null;
@@ -27,16 +37,25 @@ export interface CreateLinkBody {
 
 export interface PaymentLink {
   id: string;
-  recipientAddress: string;
+  type: string;
+  /** @nullable */
+  recipientAddress: string | null;
   amountSol: number;
   /** @nullable */
   note: string | null;
   token: string;
+  /** @nullable */
+  escrowPublicKey: string | null;
+  funded: boolean;
+  /** @nullable */
+  fundedTxSignature: string | null;
   paid: boolean;
   /** @nullable */
   txSignature: string | null;
   /** @nullable */
   payerAddress: string | null;
+  /** @nullable */
+  claimantAddress: string | null;
   createdAt: string;
   /** @nullable */
   paidAt: string | null;
@@ -45,6 +64,20 @@ export interface PaymentLink {
 export interface MarkLinkPaidBody {
   txSignature: string;
   payerAddress: string;
+}
+
+export interface MarkLinkFundedBody {
+  txSignature: string;
+}
+
+export interface ClaimLinkBody {
+  claimantAddress: string;
+}
+
+export interface ClaimLinkResponse {
+  txSignature: string;
+  claimantAddress: string;
+  amountSol: number;
 }
 
 export interface ErrorResponse {

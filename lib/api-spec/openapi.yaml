@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -18,7 +17,6 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -78,7 +76,7 @@ paths:
     patch:
       operationId: markLinkPaid
       tags: [links]
-      summary: Mark a payment link as paid
+      summary: Mark a receive-type link as paid
       parameters:
         - name: linkId
           in: path
@@ -104,6 +102,72 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /links/{linkId}/fund:
+    patch:
+      operationId: markLinkFunded
+      tags: [links]
+      summary: Mark a send-type link as funded with escrow tx
+      parameters:
+        - name: linkId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkLinkFundedBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentLink"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /links/{linkId}/claim:
+    post:
+      operationId: claimLink
+      tags: [links]
+      summary: Claim a send-type link - server sends from escrow to claimant
+      parameters:
+        - name: linkId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimLinkBody"
+      responses:
+        "200":
+          description: Claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimLinkResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -116,8 +180,11 @@ components:
     CreateLinkBody:
       type: object
       properties:
-        recipientAddress:
+        type:
           type: string
+          enum: [send, receive]
+        recipientAddress:
+          type: ["string", "null"]
         amountSol:
           type: number
         note:
@@ -126,7 +193,7 @@ components:
           type: string
           enum: [SOL, USDC]
       required:
-        - recipientAddress
+        - type
         - amountSol
         - token
     PaymentLink:
@@ -134,19 +201,29 @@ components:
       properties:
         id:
           type: string
-        recipientAddress:
+        type:
           type: string
+        recipientAddress:
+          type: ["string", "null"]
         amountSol:
           type: number
         note:
           type: ["string", "null"]
         token:
           type: string
+        escrowPublicKey:
+          type: ["string", "null"]
+        funded:
+          type: boolean
+        fundedTxSignature:
+          type: ["string", "null"]
         paid:
           type: boolean
         txSignature:
           type: ["string", "null"]
         payerAddress:
+          type: ["string", "null"]
+        claimantAddress:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -154,13 +231,18 @@ components:
           type: ["string", "null"]
       required:
         - id
+        - type
         - recipientAddress
         - amountSol
         - note
         - token
+        - escrowPublicKey
+        - funded
+        - fundedTxSignature
         - paid
         - txSignature
         - payerAddress
+        - claimantAddress
         - createdAt
         - paidAt
     MarkLinkPaidBody:
@@ -173,6 +255,33 @@ components:
       required:
         - txSignature
         - payerAddress
+    MarkLinkFundedBody:
+      type: object
+      properties:
+        txSignature:
+          type: string
+      required:
+        - txSignature
+    ClaimLinkBody:
+      type: object
+      properties:
+        claimantAddress:
+          type: string
+      required:
+        - claimantAddress
+    ClaimLinkResponse:
+      type: object
+      properties:
+        txSignature:
+          type: string
+        claimantAddress:
+          type: string
+        amountSol:
+          type: number
+      required:
+        - txSignature
+        - claimantAddress
+        - amountSol
     ErrorResponse:
       type: object
       properties:

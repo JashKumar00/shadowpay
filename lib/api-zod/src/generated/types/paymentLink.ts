@@ -8,16 +8,25 @@
 
 export interface PaymentLink {
   id: string;
-  recipientAddress: string;
+  type: string;
+  /** @nullable */
+  recipientAddress: string | null;
   amountSol: number;
   /** @nullable */
   note: string | null;
   token: string;
+  /** @nullable */
+  escrowPublicKey: string | null;
+  funded: boolean;
+  /** @nullable */
+  fundedTxSignature: string | null;
   paid: boolean;
   /** @nullable */
   txSignature: string | null;
   /** @nullable */
   payerAddress: string | null;
+  /** @nullable */
+  claimantAddress: string | null;
   createdAt: string;
   /** @nullable */
   paidAt: string | null;
