@@ -242,15 +242,15 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       return;
     }
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
 
     // Build a dummy transaction with placeholder lamports=1 so we can measure the exact fee
     const dummyTx = new Transaction({
       recentBlockhash: blockhash,
       feePayer: escrowKeypair.publicKey,
     }).add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 3000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
       SystemProgram.transfer({
         fromPubkey: escrowKeypair.publicKey,
         toPubkey: claimantPubkey,
@@ -258,7 +258,7 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       })
     );
     const feeResponse = await connection.getFeeForMessage(dummyTx.compileMessage(), "confirmed");
-    const exactFee = feeResponse.value ?? 5100; // fallback to 5100 (5000 sig + 100 priority)
+    const exactFee = feeResponse.value ?? 6000; // fallback to 6000 (safe buffer)
 
     // Transfer exactly (balance − exactFee) so the escrow ends at 0 (clean account close)
     const transferAmount = escrowBalance - exactFee;
@@ -271,8 +271,8 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
       recentBlockhash: blockhash,
       feePayer: escrowKeypair.publicKey,
     }).add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 2000 }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 3000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }),
       SystemProgram.transfer({
         fromPubkey: escrowKeypair.publicKey,
         toPubkey: claimantPubkey,
@@ -283,8 +283,8 @@ router.post("/links/:linkId/claim", async (req, res): Promise<void> => {
     transaction.sign(escrowKeypair);
     const signature = await connection.sendRawTransaction(transaction.serialize(), {
       skipPreflight: false,
-      preflightCommitment: "processed",
-      maxRetries: 5,
+      preflightCommitment: "confirmed",
+      maxRetries: 3,
     });
 
     await connection.confirmTransaction(

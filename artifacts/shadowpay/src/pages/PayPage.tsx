@@ -145,11 +145,25 @@ export default function PayPage() {
     try {
       const destPubkey = new PublicKey(sweepDest.trim());
       const balance = await connection.getBalance(stealthKeypair.publicKey);
-      const feeEstimate = 5100;
-      const transferAmount = balance - feeEstimate;
-      if (transferAmount <= 0) throw new Error("Insufficient balance in stealth address");
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+
+      // Measure the exact fee using the real transaction shape
+      const probeTx = buildMinFeeTx(
+        SystemProgram.transfer({
+          fromPubkey: stealthKeypair.publicKey,
+          toPubkey: destPubkey,
+          lamports: 1,
+        })
+      );
+      probeTx.recentBlockhash = blockhash;
+      probeTx.feePayer = stealthKeypair.publicKey;
+      const feeResponse = await connection.getFeeForMessage(probeTx.compileMessage(), "confirmed");
+      const exactFee = feeResponse.value ?? 6000;
+
+      const transferAmount = balance - exactFee;
+      if (transferAmount <= 0) throw new Error("Insufficient balance in stealth address to cover fees");
+
       const tx = buildMinFeeTx(
         SystemProgram.transfer({
           fromPubkey: stealthKeypair.publicKey,
@@ -162,10 +176,14 @@ export default function PayPage() {
       tx.sign(stealthKeypair);
 
       const sig = await connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: true,
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
         maxRetries: 3,
       });
-      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+      const result = await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+      if (result.value.err) {
+        throw new Error(`Sweep transaction failed on-chain: ${JSON.stringify(result.value.err)}`);
+      }
       setSweepSig(sig);
       setSweepState("done");
       setStealthBalance(0);
@@ -192,7 +210,10 @@ export default function PayPage() {
         skipPreflight: true,
         maxRetries: 3,
       });
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+      const result = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+      if (result.value.err) {
+        throw new Error(`Transaction failed on-chain: ${JSON.stringify(result.value.err)}`);
+      }
       await markPaid.mutateAsync({ linkId, data: { txSignature: signature, payerAddress: publicKey.toBase58() } });
       setTxSig(signature);
       refetch();
