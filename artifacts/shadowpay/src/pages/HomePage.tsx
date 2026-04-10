@@ -145,6 +145,7 @@ export default function HomePage() {
         setCancelled(false);
         setError(null);
         setSendStatus("");
+        setSendingFunds(false);
         if (publicKey) connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
         return;
       } catch (e: any) {
