@@ -164,7 +164,7 @@ function SuccessModal({ link, onClose }: { link: string; onClose: () => void }) 
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
         transition={{ type: "spring", damping: 20 }}
-        className="glass-card p-8 rounded-3xl w-full max-w-md relative"
+        className="glass-card p-8 rounded-3xl w-full max-w-xl relative"
         style={{ borderColor: "rgba(124,58,237,0.4)", boxShadow: "0 0 60px rgba(124,58,237,0.3), 0 0 120px rgba(6,182,212,0.1)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -370,17 +370,15 @@ export default function HomePage() {
           Solana Mainnet · 400ms block time · ~$0.001 fee
         </motion.div>
 
-        <h1 className="text-center font-black leading-[1.05] tracking-tight mb-4" style={{ fontSize: "clamp(48px, 8vw, 80px)" }}>
-          <motion.span className="block text-white" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            Private
-          </motion.span>
-          <motion.span className="block shimmer-text" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            Payment
-          </motion.span>
-          <motion.span className="block glow-purple" style={{ color: "var(--purple)" }} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            Links
-          </motion.span>
-        </h1>
+        <motion.h1
+          className="text-center font-black leading-[1.1] tracking-tight mb-4 whitespace-nowrap"
+          style={{ fontSize: "clamp(36px, 6vw, 72px)" }}
+          initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        >
+          <span className="text-white">Private </span>
+          <span className="shimmer-text">Payment </span>
+          <span className="glow-purple" style={{ color: "var(--purple)" }}>Links</span>
+        </motion.h1>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
           className="text-sm text-center max-w-sm leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>
@@ -390,7 +388,7 @@ export default function HomePage() {
         {/* Stat pills */}
         {connected && publicKey && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-            className="w-full max-w-md grid grid-cols-3 gap-2 mb-6">
+            className="w-full max-w-xl grid grid-cols-3 gap-2 mb-6">
             <StatPill
               icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
               label="Balance" value={solBalance !== null ? `${solBalance.toFixed(4)} SOL` : "—"} color="var(--cyan)"
@@ -411,7 +409,7 @@ export default function HomePage() {
       <section className="relative z-10 flex justify-center px-4 pb-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="w-full max-w-md"
+          className="w-full max-w-xl"
           style={{ transformStyle: "preserve-3d", transition: "transform 0.15s ease" }}
         >
           {/* Tabs */}
