@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   ConnectionProvider,
@@ -22,6 +22,7 @@ import { WalletModalProvider } from "@/components/WalletModalProvider";
 import HomePage from "@/pages/HomePage";
 import PayPage from "@/pages/PayPage";
 import ClaimPage from "@/pages/ClaimPage";
+import DonatePage from "@/pages/DonatePage";
 
 const RPC_ENDPOINT =
   (import.meta.env.VITE_SOLANA_RPC_URL as string) ||
@@ -46,14 +47,48 @@ function NotFound() {
   );
 }
 
+function DonateButton() {
+  const [, navigate] = useLocation();
+  return (
+    <button
+      onClick={() => navigate("/donate")}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-300"
+      style={{
+        background: "rgba(10,10,26,0.85)",
+        backdropFilter: "blur(16px)",
+        border: "1px solid rgba(124,58,237,0.4)",
+        color: "var(--purple-light)",
+        boxShadow: "0 0 20px rgba(124,58,237,0.25)",
+        animation: "donate-pulse 3s ease-in-out infinite",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 0 40px rgba(124,58,237,0.5), 0 0 80px rgba(6,182,212,0.2)";
+        (e.currentTarget as HTMLElement).style.transform = "scale(1.06)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.7)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 0 20px rgba(124,58,237,0.25)";
+        (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.4)";
+      }}
+    >
+      ☕ <span>Donate</span>
+    </button>
+  );
+}
+
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/pay/:linkId" component={PayPage} />
-      <Route path="/claim" component={ClaimPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/" component={HomePage} />
+        <Route path="/pay/:linkId" component={PayPage} />
+        <Route path="/claim" component={ClaimPage} />
+        <Route path="/donate" component={DonatePage} />
+        <Route component={NotFound} />
+      </Switch>
+      <DonateButton />
+    </>
   );
 }
 
