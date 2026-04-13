@@ -47,6 +47,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "catalog:",
     "@workspace/api-client-react": "workspace:*",
     "class-variance-authority": "catalog:",
@@ -75,6 +76,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@solana/spl-token": "^0.4.14",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
@@ -89,6 +92,9 @@
     "@wallet-standard/react": "^1.0.1",
     "buffer": "^6.0.3",
     "nanoid": "^5.1.7",
-    "snarkjs": "^0.7.6"
+    "react-countup": "^6.5.3",
+    "react-hot-toast": "^2.6.0",
+    "snarkjs": "^0.7.6",
+    "three": "^0.183.2"
   }
 }

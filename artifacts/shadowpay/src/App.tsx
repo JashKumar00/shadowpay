@@ -37,7 +37,7 @@ const queryClient = new QueryClient();
 
 function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0f] text-white">
+    <div className="min-h-screen w-full flex items-center justify-center text-white" style={{ background: "var(--bg-void)" }}>
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-2 text-purple-400">404</h1>
         <p className="text-gray-400">Page not found.</p>

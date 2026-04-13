@@ -239,7 +239,7 @@ export default function PayPage() {
       <div className="min-h-screen flex items-center justify-center relative">
         <Background />
         <div className="relative z-10 flex flex-col items-center gap-3">
-          <Spinner /><p className="text-gray-500 text-sm">Loading payment link...</p>
+          <Spinner /><p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading payment link...</p>
         </div>
       </div>
     );
@@ -298,7 +298,7 @@ export default function PayPage() {
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
               </div>
-              <h1 className="text-3xl font-black neon-text-purple mb-1">Privately Received!</h1>
+              <h1 className="text-3xl font-black glow-purple mb-1">Privately Received!</h1>
               <p className="text-gray-400 text-sm">Funds swept to your wallet. No on-chain identity revealed.</p>
             </div>
           )}
@@ -324,7 +324,7 @@ export default function PayPage() {
                       </svg>
                     </div>
                   </div>
-                  <h1 className="text-3xl font-black neon-text-purple mb-1">
+                  <h1 className="text-3xl font-black glow-purple mb-1">
                     {claimed ? "Funds in Stealth Address" : "Private Claim"}
                   </h1>
                   <p className="text-gray-500 text-sm">
@@ -340,7 +340,7 @@ export default function PayPage() {
                       <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                     </svg>
                   </div>
-                  <h1 className="text-3xl font-black neon-text-purple mb-1">Payment Request</h1>
+                  <h1 className="text-3xl font-black glow-purple mb-1">Payment Request</h1>
                   <p className="text-gray-500 text-sm">Pay directly on-chain. ~$0.001 in fees.</p>
                 </>
               )}
@@ -351,7 +351,7 @@ export default function PayPage() {
           <div className="rounded-2xl overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(24px)" }}>
             <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               <span className="text-gray-500 text-xs uppercase tracking-widest font-bold">Amount</span>
-              <span className="text-3xl font-black text-white neon-text-purple">
+              <span className="text-3xl font-black text-white glow-purple">
                 {link.amountSol} <span className="text-violet-400">{link.token}</span>
               </span>
             </div>

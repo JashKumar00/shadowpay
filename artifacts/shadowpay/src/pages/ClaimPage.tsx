@@ -95,7 +95,7 @@ export default function ClaimPage() {
                 </svg>
               </div>
             </div>
-            <h1 className="text-3xl font-black text-white mb-2 neon-text-purple">My Received Payments</h1>
+            <h1 className="text-3xl font-black text-white mb-2 glow-purple">My Received Payments</h1>
             <p className="text-gray-500 text-sm">Scan the blockchain for incoming SOL transactions to your wallet.</p>
           </div>
 
@@ -104,7 +104,7 @@ export default function ClaimPage() {
               style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)", backdropFilter: "blur(20px)" }}>
               <div>
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-0.5 font-semibold">Wallet Balance</div>
-                <div className="text-2xl font-black text-white neon-text-purple">
+                <div className="text-2xl font-black text-white glow-purple">
                   {balance.toFixed(4)} <span className="text-violet-400 text-lg">SOL</span>
                 </div>
               </div>
@@ -160,7 +160,7 @@ export default function ClaimPage() {
           <button
             onClick={handleScan}
             disabled={loading || !connected}
-            className="w-full text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 mb-6 text-sm disabled:opacity-40 disabled:cursor-not-allowed btn-glow-purple"
+            className="w-full text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 mb-6 text-sm disabled:opacity-40 disabled:cursor-not-allowed glow-purple"
             style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)" }}
           >
             {loading ? (
@@ -181,7 +181,7 @@ export default function ClaimPage() {
           {scanned && txHistory.length === 0 && (
             <div className="text-center py-10 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-                style={{ background: "rgba(255,255,255,0.04)" }}>
+                style={{ background: "rgba(255,255,255,0.03)" }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
@@ -213,7 +213,7 @@ export default function ClaimPage() {
                         </svg>
                       </div>
                       <div>
-                        <div className="text-green-400 font-black text-lg neon-text-green">+{tx.amount.toFixed(4)} SOL</div>
+                        <div className="text-green-400 font-black text-lg glow-green">+{tx.amount.toFixed(4)} SOL</div>
                         <div className="text-gray-600 text-xs">{formatTime(tx.timestamp)}</div>
                       </div>
                     </div>
