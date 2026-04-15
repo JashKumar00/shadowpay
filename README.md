@@ -6,48 +6,57 @@
 
 ---
 
-## The Problem
+![ShadowPay Send Mode](screenshots/shadowpay-send.jpg)
 
-Every time you share your Solana wallet address to get paid, you hand over your financial identity. Your address is permanent and public — anyone can look it up on-chain and see your full transaction history: every payment sent, every payment received, every balance ever held.
+---
 
-This affects:
-- **Freelancers** invoicing clients who shouldn't know their full on-chain history
-- **Builders** accepting tips or donations without broadcasting their wallet
-- **Anyone** sending a gift, splitting expenses, or making a private payment
+## What Is ShadowPay?
 
-The tools that exist to solve this are mostly complicated — they require browser extensions, custom protocols, or layer-two systems most people will never use. ShadowPay makes private payments as easy as sharing a link.
+Every time you share a Solana wallet address to get paid, you hand over your financial identity. That address is permanent and public — anyone can look it up on-chain and trace your full transaction history.
+
+ShadowPay fixes this. Instead of sharing your wallet address, you share a link. The sender funds the link, and the recipient claims the funds to a one-time stealth address — completely disconnecting the payment from any real wallet on-chain.
+
+No browser extensions. No special protocols. Just a link.
 
 ---
 
 ## How It Works
 
-### Send Mode (Stealth Address)
+ShadowPay has two modes: **Send** and **Receive**.
+
+### Send Mode — Stealth Escrow
+
+Use this when you want to pay someone privately. Funds go through an on-chain escrow and are routed to a one-time stealth address only the recipient can claim.
 
 1. Connect your wallet and enter an amount (SOL or USDC)
-2. Click **Send** — funds go into a one-time escrow account on-chain
-3. A shareable link is generated with a random 32-byte secret embedded in the URL `#fragment`
-4. The recipient opens the link — their browser derives a **one-time stealth keypair** from the secret using SHA-256
+2. Click **Send & Generate Link** — your wallet funds a one-time escrow account on-chain
+3. A shareable link is generated with a 32-byte secret embedded in the URL `#fragment`
+4. The recipient opens the link — their browser derives a one-time stealth keypair from the secret using SHA-256
 5. The backend moves funds from escrow → stealth address
-6. On-chain observers see only two random-looking addresses. No names. No history.
-7. Recipient sweeps funds to any wallet they choose
+6. On-chain observers see only two random-looking addresses — no names, no history
+7. The recipient sweeps the funds to any wallet they choose
 
-### Receive Mode (Direct Payment Request)
+### Receive Mode — Payment Request
 
-1. Generate a payment request link
-2. Share it with the payer
-3. Payer connects their wallet and pays directly to your address
-4. Simpler flow — no stealth address — but still no wallet address shared upfront
+Use this when you want to request a payment. The payer connects their wallet and pays directly to you — no wallet address shared upfront.
+
+1. Switch to **Receive** mode and connect your wallet
+2. Enter the amount you want to request
+3. Click **Generate Payment Request Link** and share it
+4. The payer opens the link, connects their wallet, and pays directly
+
+![ShadowPay Receive Mode](screenshots/shadowpay-receive.jpg)
 
 ---
 
-## Stealth Address Implementation
+## The Stealth Address Flow
 
-ShadowPay implements stealth addresses **natively on Solana** without relying on the Umbra SDK (which is Ethereum-specific). The privacy mechanism works as follows:
+The privacy mechanism is implemented natively on Solana using the Web Crypto API — no Ethereum SDK required.
 
 ```
-secret (32 bytes, generated in browser)
+secret (32 bytes, generated in sender's browser)
     +
-linkId (string)
+linkId (string, stored on server)
     │
     ▼
 SHA-256(secret_bytes + linkId_bytes)
@@ -59,21 +68,47 @@ ed25519 seed → Keypair.fromSeed(seed)
 One-time stealth address (Solana ed25519 keypair)
 ```
 
-**Key privacy guarantee:** The secret lives only in the URL `#fragment`. The fragment is a browser feature that is **never transmitted to any server** — not even ShadowPay's backend. The server only ever sees the link ID.
-
-This is conceptually equivalent to what Umbra Protocol does on Ethereum, reimplemented natively for Solana's ed25519 keypair system using Web Crypto API's SHA-256.
+**Key guarantee:** The secret lives only in the URL `#fragment`. Fragments are a browser-only feature — they are **never transmitted to any server**, not even ShadowPay's backend. The server only ever sees the link ID.
 
 ---
 
-## Target Users
+## How to Use
 
-| User | Use Case |
-|------|----------|
-| Freelancers | Invoice clients without revealing wallet history |
-| Content creators | Accept tips/donations privately |
-| Gift senders | Send SOL as a gift — recipient's wallet stays hidden |
-| Privacy-conscious users | Any payment where identity shouldn't be on-chain |
-| DAOs / builders | Airdrop to holders without exposing recipient addresses |
+### Creating a Send Link
+
+1. Open the app and click **Select Wallet** to connect your Solana wallet
+2. Make sure you are on **Send** mode (the default)
+3. Choose a token (SOL or USDC) and enter the amount
+4. Click **Send X SOL & Generate Link**
+5. Approve the transaction in your wallet popup
+6. Copy the generated link and share it with the recipient
+
+### Claiming a Payment (as Recipient)
+
+1. Open the link shared with you — no wallet needed
+2. Click **Claim Privately**
+3. Enter a destination wallet address to sweep the funds to
+4. Click **Sweep to Wallet**
+
+### Creating a Receive Link
+
+1. Switch to **Receive** mode and connect your wallet
+2. Enter the amount you want to request
+3. Click **Generate Payment Request Link**
+4. Share the link — the payer connects their wallet and pays directly
+
+---
+
+## Privacy Guarantees
+
+| Guarantee | Status |
+|-----------|--------|
+| Sender's wallet is only on the escrow funding tx | ✅ |
+| Recipient's real wallet is never on-chain | ✅ |
+| The secret never leaves the browser (URL fragment) | ✅ |
+| Escrow closes to zero on claim — no dust left | ✅ |
+| Non-custodial — ShadowPay never holds your funds | ✅ |
+| The link must be shared privately — whoever has it can claim | ⚠️ |
 
 ---
 
@@ -92,96 +127,6 @@ This is conceptually equivalent to what Umbra Protocol does on Ethereum, reimple
 
 ---
 
-## Build & Run Locally
-
-### Prerequisites
-
-- Node.js 18+
-- pnpm 8+
-- PostgreSQL database
-- Solana RPC URL (Mainnet)
-
-### Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/JashKumar00/shadowpay.git
-cd shadowpay
-
-# Install dependencies
-pnpm install
-
-# Set environment variables
-cp .env.example .env
-```
-
-Add the following to your `.env`:
-
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/shadowpay
-SOLANA_RPC_URL=https://your-rpc-endpoint.com
-SESSION_SECRET=your-random-secret
-```
-
-### Database Setup
-
-```bash
-pnpm --filter @workspace/db run push
-```
-
-### Run Development Servers
-
-```bash
-# Start the API server
-pnpm --filter @workspace/api-server run dev
-
-# Start the frontend (separate terminal)
-pnpm --filter @workspace/shadowpay run dev
-```
-
-Frontend runs at `http://localhost:5173`
-API server runs at `http://localhost:3001`
-
----
-
-## How to Use
-
-### Creating a Send Link
-
-1. Open the app and click **Select Wallet** to connect your Solana wallet
-2. Make sure you are on **Send** mode (default)
-3. Choose token (SOL or USDC) and enter the amount
-4. Click **Send X SOL & Generate Link**
-5. Approve the transaction in your wallet popup
-6. Copy the generated link and share it with the recipient
-
-### Claiming as a Recipient
-
-1. Open the link shared with you — no wallet needed
-2. Click **Claim Privately**
-3. Once claimed, enter a destination wallet address to sweep to
-4. Click **Sweep to Wallet**
-
-### Creating a Receive Link
-
-1. Switch to **Receive** mode
-2. Enter the amount you want to request
-3. Click **Generate Payment Request Link**
-4. Share the link — the payer connects their wallet and pays directly
-
----
-
-## Deployed Links
-
-| Resource | URL |
-|----------|-----|
-| Live App | [umbra-privacy-payments.replit.app](https://umbra-privacy-payments.replit.app) |
-| GitHub | [github.com/JashKumar00/shadowpay](https://github.com/JashKumar00/shadowpay) |
-
-No on-chain programs are deployed — ShadowPay uses native Solana system transfers only, requiring no custom smart contracts.
-
----
-
 ## Architecture
 
 ```
@@ -194,7 +139,7 @@ Browser (Sender)
 Backend (API Server)
   ├── Stores link metadata in PostgreSQL
   ├── Holds escrow keypair until claim
-  └── On claim: transfers escrow → stealth address using getFeeForMessage() for exact fees
+  └── On claim: transfers escrow → stealth address
 
 Browser (Recipient)
   ├── Reads #fragment secret locally
@@ -205,20 +150,48 @@ Browser (Recipient)
 
 ---
 
-## Privacy Guarantees
+## Build & Run Locally
 
-- ✅ Sender's wallet is visible only on the funding tx (escrow is a random address)
-- ✅ Recipient's real wallet is **never** on-chain in connection with this payment
-- ✅ The secret never leaves the browser (URL fragment)
-- ✅ Escrow closes to zero on claim — no dust left behind
-- ✅ Non-custodial — ShadowPay never holds your funds
-- ⚠️ The link itself must be shared privately — whoever has the link can claim
+**Prerequisites:** Node.js 18+, pnpm 8+, PostgreSQL, Solana RPC URL
+
+```bash
+git clone https://github.com/JashKumar00/shadowpay.git
+cd shadowpay
+pnpm install
+cp .env.example .env
+```
+
+Add to your `.env`:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/shadowpay
+SOLANA_RPC_URL=https://your-rpc-endpoint.com
+SESSION_SECRET=your-random-secret
+```
+
+```bash
+# Push database schema
+pnpm --filter @workspace/db run push
+
+# Start API server
+pnpm --filter @workspace/api-server run dev
+
+# Start frontend (separate terminal)
+pnpm --filter @workspace/shadowpay run dev
+```
+
+Frontend: `http://localhost:5173` · API: `http://localhost:3001`
 
 ---
 
-## Demo Video
+## Deployed Links
 
-_See the `/attached_assets` folder or the submission for a full walkthrough video demonstrating the send, claim, and sweep flows._
+| Resource | URL |
+|----------|-----|
+| Live App | [umbra-privacy-payments.replit.app](https://umbra-privacy-payments.replit.app) |
+| GitHub | [github.com/JashKumar00/shadowpay](https://github.com/JashKumar00/shadowpay) |
+
+No on-chain programs deployed — ShadowPay uses native Solana system transfers only, requiring no custom smart contracts.
 
 ---
 
