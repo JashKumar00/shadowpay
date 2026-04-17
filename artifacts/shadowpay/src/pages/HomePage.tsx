@@ -267,9 +267,9 @@ export default function HomePage() {
     connection.getBalance(publicKey).then((b) => setSolBalance(b / LAMPORTS_PER_SOL)).catch(() => {});
   }, [publicKey, connection]);
 
-  // 3D tilt on card
+  // 3D tilt on card (desktop only — skip on touch devices)
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (!cardRef.current) return;
+    if (!cardRef.current || window.matchMedia("(hover: none)").matches) return;
     const rect = cardRef.current.getBoundingClientRect();
     const dx = e.clientX - rect.left - rect.width / 2;
     const dy = e.clientY - rect.top - rect.height / 2;
@@ -410,7 +410,6 @@ export default function HomePage() {
         <motion.div
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
           className="w-full max-w-xl"
-          style={{ transformStyle: "preserve-3d", transition: "transform 0.15s ease" }}
         >
           {/* Tabs */}
           <div className="flex rounded-xl p-1 mb-4"
@@ -442,7 +441,6 @@ export default function HomePage() {
               background: "rgba(10,10,26,0.75)",
               border: "1px solid var(--border)",
               backdropFilter: "blur(24px)",
-              transformStyle: "preserve-3d",
             }}
           >
             {/* Info banner */}
@@ -494,7 +492,7 @@ export default function HomePage() {
                 <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block font-mono" style={{ color: "var(--text-muted)" }}>Amount ({token})</label>
                 <div className="relative">
                   <input
-                    type="number" value={amount} onChange={(e) => setAmount(e.target.value)} min="0.000001" step="0.01"
+                    type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00"
                     className="w-full rounded-xl px-4 py-4 text-3xl font-black outline-none transition-all pr-20 font-mono"
                     style={{
                       background: "rgba(255,255,255,0.03)",
