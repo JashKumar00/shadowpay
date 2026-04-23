@@ -15,12 +15,10 @@ const REPO = "shadowpay";
 const BRANCH = "main";
 const REPO_ROOT = "/home/runner/workspace";
 
-// Files known to be too large for the API proxy (57MB each).
-// These must be pushed via `git push` with a stored GITHUB_TOKEN.
-const KNOWN_LARGE_FILES = new Set([
-  "attached_assets/Screen_Recording_2026-04-11_001641_1775855237470.mp4",
-  "attached_assets/Screen_Recording_2026-04-11_015617_1775855237472.mp4",
-]);
+// Files that are too large for the API proxy and must be excluded.
+// Add paths here if new large binary files appear that cannot be proxy-uploaded.
+// Note: MP4s in attached_assets/ are excluded via .gitignore and not tracked.
+const KNOWN_LARGE_FILES = new Set([]);
 
 const connectors = new ReplitConnectors();
 

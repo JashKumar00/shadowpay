@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Large video assets — too large for git/GitHub without LFS
+attached_assets/*.mp4
