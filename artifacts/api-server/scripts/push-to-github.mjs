@@ -15,6 +15,13 @@ const REPO = "shadowpay";
 const BRANCH = "main";
 const REPO_ROOT = "/home/runner/workspace";
 
+// Files known to be too large for the API proxy (57MB each).
+// These must be pushed via `git push` with a stored GITHUB_TOKEN.
+const KNOWN_LARGE_FILES = new Set([
+  "attached_assets/Screen_Recording_2026-04-11_001641_1775855237470.mp4",
+  "attached_assets/Screen_Recording_2026-04-11_015617_1775855237472.mp4",
+]);
+
 const connectors = new ReplitConnectors();
 
 async function ghApi(endpoint, options = {}) {
@@ -41,7 +48,7 @@ async function getRemoteState() {
   const remoteFileMap = {};
   for (const item of treeData.tree || []) {
     if (item.type === "blob") {
-      remoteFileMap[item.path] = item.sha;
+      remoteFileMap[item.path] = { sha: item.sha, mode: item.mode };
     }
   }
   return { headSha, treeSha, remoteFileMap };
@@ -68,15 +75,19 @@ async function main() {
   console.log(`Remote HEAD: ${headSha || "none"}`);
   console.log(`Remote has ${Object.keys(remoteFileMap).length} blob files`);
 
-  // Get local git object SHAs to compare with remote
-  const localGitShas = {};
+  // Get local git object SHAs and modes to compare with remote
+  // `git ls-files -s` output: <mode> <sha> <stage>\t<file>
+  const localFileInfo = {};
   for (const file of allFiles) {
     const line = execSync(`git ls-files -s -- "${file}"`, { cwd: REPO_ROOT }).toString().trim();
-    localGitShas[file] = line.split(/\s+/)[1] || null;
+    const parts = line.split(/\s+/);
+    localFileInfo[file] = { mode: parts[0] || "100644", sha: parts[1] || null };
   }
 
   // Find changed/new files and deleted files
-  const toUpload = allFiles.filter((f) => localGitShas[f] !== remoteFileMap[f]);
+  const toUpload = allFiles.filter(
+    (f) => localFileInfo[f].sha !== remoteFileMap[f]?.sha || localFileInfo[f].mode !== remoteFileMap[f]?.mode
+  );
   const toDelete = Object.keys(remoteFileMap).filter((f) => !allFiles.includes(f));
 
   console.log(`Files to upload: ${toUpload.length}, Files to delete: ${toDelete.length}`);
@@ -122,7 +133,8 @@ async function main() {
 
     try {
       const blobSha = await createBlob(content, encoding);
-      treeItems.push({ path: file, mode: "100644", type: "blob", sha: blobSha });
+      const mode = localFileInfo[file]?.mode || "100644";
+      treeItems.push({ path: file, mode, type: "blob", sha: blobSha });
     } catch (err) {
       console.error(`  Failed blob for ${file}: ${err.message}`);
       skipped.push(file);
@@ -131,11 +143,23 @@ async function main() {
 
   // Mark deleted files with sha: null
   for (const file of toDelete) {
-    treeItems.push({ path: file, mode: "100644", type: "blob", sha: null });
+    const mode = remoteFileMap[file]?.mode || "100644";
+    treeItems.push({ path: file, mode, type: "blob", sha: null });
+  }
+
+  // Abort if unexpected files were skipped (not in the known allowlist)
+  const unexpectedSkips = skipped.filter((f) => !KNOWN_LARGE_FILES.has(f));
+  if (unexpectedSkips.length > 0) {
+    console.error(`\nAborting: ${unexpectedSkips.length} unexpected file(s) could not be uploaded:`);
+    unexpectedSkips.forEach((f) => console.error(`  - ${f}`));
+    process.exit(1);
   }
 
   if (treeItems.length === 0) {
     console.log("No tree items to commit.");
+    if (skipped.length > 0) {
+      console.log(`(${skipped.length} known large file(s) skipped — push via git with GITHUB_TOKEN)`);
+    }
     return;
   }
 
@@ -179,8 +203,9 @@ async function main() {
 
   console.log(`\nDone! https://github.com/${OWNER}/${REPO}`);
   if (skipped.length > 0) {
-    console.log(`\nSkipped ${skipped.length} files (too large for API proxy):`);
+    console.log(`\nNote: ${skipped.length} known large file(s) were skipped (allowlisted):`);
     skipped.forEach((f) => console.log(`  - ${f}`));
+    console.log("Push these via: git push with a stored GITHUB_TOKEN secret.");
   }
 }
 
