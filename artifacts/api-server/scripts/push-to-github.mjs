@@ -1,8 +1,18 @@
 /**
- * Push all tracked local files to the GitHub repository.
+ * Sync all tracked local files to the GitHub repository.
  * Uses the GitHub Git Data API via Replit's GitHub integration.
  *
- * Usage: node scripts/push-to-github.mjs
+ * Usage:
+ *   pnpm --filter @workspace/api-server run sync:github   (push changes)
+ *   pnpm --filter @workspace/api-server run sync:verify   (verify parity)
+ *
+ * Design notes:
+ * - Uses `force: true` when updating the branch ref. This is intentional —
+ *   GitHub commits are created directly via the API rather than replaying
+ *   local git history, so a force-update is required. Branch protection rules
+ *   on GitHub will block accidental overwrites if configured.
+ * - Files in KNOWN_LARGE_FILES are silently skipped without failing the sync.
+ *   Any other upload failure causes an immediate abort (non-zero exit).
  */
 
 import { ReplitConnectors } from "@replit/connectors-sdk";
