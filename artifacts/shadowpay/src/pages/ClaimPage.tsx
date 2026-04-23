@@ -128,7 +128,7 @@ export default function ClaimPage() {
                 <p className="text-gray-600 text-xs leading-relaxed">
                   Create a Receive link from the home page and share it. When someone pays, the SOL goes directly to your wallet on-chain.
                 </p>
-                <Link href="/" className="inline-flex items-center gap-1 mt-2 text-violet-400 hover:text-violet-300 text-xs font-medium transition-colors">
+                <Link href="/app" className="inline-flex items-center gap-1 mt-2 text-violet-400 hover:text-violet-300 text-xs font-medium transition-colors">
                   Create a payment link
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />

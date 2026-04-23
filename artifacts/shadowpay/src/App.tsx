@@ -19,6 +19,7 @@ import {
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 import { WalletModalProvider } from "@/components/WalletModalProvider";
+import LandingPage from "@/pages/LandingPage";
 import HomePage from "@/pages/HomePage";
 import PayPage from "@/pages/PayPage";
 import ClaimPage from "@/pages/ClaimPage";
@@ -48,7 +49,8 @@ function NotFound() {
 }
 
 function DonateButton() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  if (location === "/") return null;
   return (
     <button
       onClick={() => navigate("/donate")}
@@ -81,7 +83,8 @@ function Router() {
   return (
     <>
       <Switch>
-        <Route path="/" component={HomePage} />
+        <Route path="/" component={LandingPage} />
+        <Route path="/app" component={HomePage} />
         <Route path="/pay/:linkId" component={PayPage} />
         <Route path="/claim" component={ClaimPage} />
         <Route path="/donate" component={DonatePage} />

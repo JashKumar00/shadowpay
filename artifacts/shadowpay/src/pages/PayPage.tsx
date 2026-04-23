@@ -254,7 +254,7 @@ export default function PayPage() {
           <div className="text-6xl font-black text-violet-500/20 mb-4">404</div>
           <h1 className="text-2xl font-bold mb-2">Link Not Found</h1>
           <p className="text-gray-500 mb-6 text-sm">This payment link doesn't exist or has expired.</p>
-          <Link href="/" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all" style={{ boxShadow: "0 0 20px rgba(124,58,237,0.4)" }}>
+          <Link href="/app" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all" style={{ boxShadow: "0 0 20px rgba(124,58,237,0.4)" }}>
             Create Your Own Link →
           </Link>
         </div>
@@ -639,7 +639,7 @@ export default function PayPage() {
           )}
 
           <div className="text-center mt-4">
-            <Link href="/" className="text-violet-400 hover:text-violet-300 text-xs transition-colors">
+            <Link href="/app" className="text-violet-400 hover:text-violet-300 text-xs transition-colors">
               Create your own payment link →
             </Link>
           </div>
